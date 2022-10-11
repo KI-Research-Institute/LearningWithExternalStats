@@ -1,17 +1,21 @@
+library(stats)
+library(pROC)
+library(WeightedROC)
+
 #' evaluation from external stats
 
 # TODO - replace or requires installation of ParallelLoger?
 
 #' Estimate external performance from statistics
-#' 
+#'
 #' @description Estimate external performance using external statistics and an internal dataset
-#' 
+#'
 #' @param internalData a list that includes internal data and predictions with the following fields:
 #'   z: a data frame of transformed feature-outcome pairs
 #'   y: a vector of outcomes
 #'   p: a vector of predicted outcome probabilities
 #' @param externalStats a vector of means of transformed feature-outcome pairs
-#' 
+#'
 #' Reweighing algorithm parameters:
 #' @param divergence 'entropy' or 'chi2'.
 #' 'entropy' directs the algorithm to minimize the negative entropy, \eqn{-\sum_i w_i \log w_i}.
@@ -21,24 +25,24 @@
 #' @param optimizationMethod primal or dual. Currently dual works only with entropy divergence
 #' @param maxProp maximum proportion between external and internal means
 #' @param nboot number of bootstrap repetitions for confidence interval assessment
-#' 
+#'
 #' @return a named list with the following fields:
 #'   summary: a name list with pre-weighting diagnostics, post-weighting diagnostics, estimated performance measures
 #'     and bootstrap based performance measures.
 #'   preDiagnosis: more detailed pre-reweighing diagnosis information.
 #'   bootstrap: a data frame of results of single bootstrap repetitions
-#'   
+#'
 #' This function reweights the internal z matrix with the objective to make the weighted means as close as
 #' possible to the external means represented by mu. Performance measures are estimated using the resulting
 #' weights, the vector of actual outcomes y, and the predicted outcome probabilities p.
-#' 
-#' 
+#'
+#'
 estimateExternalPerformanceFromStats <- function(
-    internalData, externalStats, 
-    divergence = "entropy", lambda = 1e-06, minSd = 1e-04, 
+    internalData, externalStats,
+    divergence = "entropy", lambda = 1e-06, minSd = 1e-04,
     minW = 1e-06, distance = "l2", optimizationMethod = "primal",
     maxProp = 500, nboot=10) {
-  #' check the type of internal data, if in plp format, convert to 
+  #' check the type of internal data, if in plp format, convert to
   dbRes <- list()
   # Pre diagnostics
   preD <- preDiagnostics(internalData$z, externalStats, maxProp)
@@ -55,14 +59,14 @@ estimateExternalPerformanceFromStats <- function(
   }
   # Re-weighting
   w <- reweightByMeans(
-    z, mu, 
-    divergence = divergence, lambda = lambda, minSd = minSd, minW = minW, distance = distance, 
-    optimizationMethod = optimizationMethod, 
+    z, mu,
+    divergence = divergence, lambda = lambda, minSd = minSd, minW = minW, distance = distance,
+    optimizationMethod = optimizationMethod,
     verbose = T)
   if (sum(is.na(w))==0) {
     widx <- w>0
     dbRes[['n']] <- sum(widx)
-    if (is.factor(y)) # TODO is this the right place 
+    if (is.factor(y)) # TODO is this the right place
       y <- as.numeric(y)-1
     dbRes[['n y']] <- t(widx) %*% y
     # Post diagnostics
@@ -97,13 +101,13 @@ estimateExternalPerformanceFromStats <- function(
 
 
 #' Pre re-weighting diagnostics
-#' 
+#'
 #' @description compare external expectations and internal means before reweighting
-#' 
+#'
 #' @param z a data frame of transformed feature-outcome pairs
 #' @param mu a vector of means of transformed feature-outcome pairs
 #' @param maxProp maximum proportion between internal and external means to determine imbalance
-#' 
+#'
 #' @return a named list with the following fields:
 #'   representedfeatured: a vecotr of represented feature names
 #'   zidx: indices of valid subjects
@@ -115,17 +119,17 @@ preDiagnostics <- function(z, mu, maxProp, verbose=T) {
   n1 <- nrow(z)
   removeUnrepresentedSubjects = T
   # TODO the following code assumes all entries represent proportions
-  if (sum(mu[representedFeatures]==0)>0 & removeUnrepresentedSubjects) { 
+  if (sum(mu[representedFeatures]==0)>0 & removeUnrepresentedSubjects) {
     ParallelLogger::logInfo(
       paste('Removing subjects with unrepresented propertis:', paste(mu[mu==0], collapse = ' '), sep = ' '))
     zidx <- rowSums(abs(z[, mu==0]))==0
-    representedFeatures <- representedFeatures[mu[representedFeatures] != 0] 
+    representedFeatures <- representedFeatures[mu[representedFeatures] != 0]
     ParallelLogger::logInfo(glue('Maintained {sum(zidx)}/{n1} subjects.\n'))
   } else {
     cat('Number of rows', n1, '\n')
     zidx = rep(TRUE, n1)
   }
-  
+
   meanz <- colMeans(z[zidx, representedFeatures])
   imbalanced <- getImbalancedFeatures(mu[representedFeatures], meanz, maxProp, verbose)
   return (list(representedFeatures=representedFeatures, zidx = zidx, imbalanced=imbalanced))
@@ -133,15 +137,15 @@ preDiagnostics <- function(z, mu, maxProp, verbose=T) {
 
 
 #' Summarize bootstrap
-#' 
+#'
 #' @description Summarize statistics of metrics obtained by bootstrapping
-#' 
+#'
 #' @param b bootstrap results matrix columns correspond to different metrix, rows to repetitions. Columns
 #' should be named by the metric.
 #' @param probs quatile probabilities
-#' 
+#'
 #' @return a named list with bootstrap statistics for every metric
-#'   
+#'
 summarizeBootstrap <- function(b, probs=c(0.025, 0.5, 0.975)) {
   nboot <- nrow(b)
   s <- list()
@@ -150,7 +154,7 @@ summarizeBootstrap <- function(b, probs=c(0.025, 0.5, 0.975)) {
     resultsQuantiles <- quantile(r, probs = probs, na.rm = TRUE)
     for (i in 1:length(probs))
       s[[paste(measure, as.character(probs[i]))]] = resultsQuantiles[[i]]
-  
+
     s[[paste(measure, 'mean')]] = mean(r, na.rm = TRUE)
     s[[paste(measure, 'sd')]] = sd(r, na.rm = TRUE)
     s[[paste(measure, 'n boot')]] = nboot - sum(is.na(r))
@@ -160,19 +164,19 @@ summarizeBootstrap <- function(b, probs=c(0.025, 0.5, 0.975)) {
 
 
 #' Post reweighing diagnostics
-#' 
+#'
 #' @description compute diagnostics of weighted samples
-#' 
-#' 
+#'
+#'
 #' @param w a vector of weights
 #' @param z a data frame of transformed feature-outcome pairs
 #' @param mu a vector of means of transformed feature-outcome pairs
-#' 
+#'
 #' @return a named list with the following:
 #'   maxw
 #' TODO   W2
 #' kl
-#' 
+#'
 postDiagnostics <- function(w, z, mu) {
   n <- length(w)
   p <- w/length(w)
@@ -180,7 +184,7 @@ postDiagnostics <- function(w, z, mu) {
   kl <- log(n) + t(p[klIdx]) %*% log(p[klIdx])
   chi2ToUnif <- n*sum((p-1/n)**2)  #  = \sum(p-1/n)^2/1/n
   maxWeightedSMD <- computeMaxSMD(mu, z, p)
-  
+
   diagnostics <- list(maxw=max(w), 'chi2-u' = chi2ToUnif, kl = kl, maxWeightedSMD=maxWeightedSMD)  # TODO add diagnostics
   return(diagnostics)
 }
@@ -202,45 +206,45 @@ getImbalancedFeatures <- function(mu, meanz, maxProp, verbose=T) {
     cat('Found imbalanced features:\n')
     print(reportDf)
   }
-  return(imbalanced)  
+  return(imbalanced)
 }
 
 
 #' Get performance measures
-#' 
+#'
 #' @description get performance measure from a pair of binary outcome vector and model predictions. The observations
 #' may be weighted by a weight vector
-#' 
+#'
 #' @param y a binary outcome vector
 #' @param p probabilities vector
 #' @param w (optional) weight vector
-#' 
+#'
 getPerformanceMeasures <- function(y, p, w=NULL) {
   nClasses <- length(unique(y))
   if (nClasses==2) {
     if (is.null(w))
-      pAuc <- as.numeric(auc(roc(y, p, direction='<', quiet=T)))
+      pAuc <- as.numeric(pROC::auc(pROC::roc(y, p, direction='<', quiet=T)))
     else
       pAuc <- WeightedAUC(WeightedROC(p, y, w))
     pLogLike <- WeightedLogLike(y, p, w)
     pBrier <- WeightedBrier(y, p, w)
-    pMeanObservedRisk <- meanObservedRisk(y, w) 
-    pMeanPredictionRisk <- meanPredictionRisk(p, w) 
+    pMeanObservedRisk <- meanObservedRisk(y, w)
+    pMeanPredictionRisk <- meanPredictionRisk(p, w)
   } else {
     warning(glue('Non binary outcome vector, number of classess = {nClasses}'))
     return(NULL)
   }
   return(list(AUC=pAuc, LogLike=pLogLike, Brier=pBrier, observedR=pMeanObservedRisk, predictedR=pMeanPredictionRisk))
-} 
+}
 
 #' Estimate internal performance
-#' 
+#'
 #' @description estimate internal performance of a model with bootstrap based confidence interval
-#' 
+#'
 #' @param y a binary outcome vector
 #' @param p probabilities vector
 #' @param nboot number of bootstrap repetitions
-#' 
+#'
 estimateInternalPerformance <- function(y, p, nboot) {
   dbRes <- list()
   dbRes[['n']] <- length(y)

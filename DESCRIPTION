@@ -1,12 +1,17 @@
 Package: LearningWithExternalStats
-Title: What the Package Does (One Line, Title Case)
+Title: Machine learning algorithms that exploit external statistics in addition to internal data
 Version: 0.0.0.9000
 Authors@R: 
-    person("First", "Last", , "first.last@example.com", role = c("aut", "cre"),
+    person("Tal", "El Hay", , "talelh@kinstitute.org.il", role = c("aut", "cre"),
            comment = c(ORCID = "YOUR-ORCID-ID"))
-Description: What the package does (one paragraph).
-License: `use_mit_license()`, `use_gpl3_license()` or friends to pick a
-    license
+Description: Currently the package focuses on evaluation performance of a model in an external dataset using internal data and statsitics from the external dataset. The core function reweights the internal data to have statistics that match the external statistics.
+License: Apache License (>= 2)
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.2.1
+Imports: 
+    CVXR,
+    glue,
+    pROC,
+    stats,
+    WeightedROC
