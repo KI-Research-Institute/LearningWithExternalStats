@@ -1,6 +1,6 @@
-#' @import stats
-#' @import pROC
-#' @import WeightedROC
+#' @importFrom stats sd quantile
+#' @importFrom pROC auc roc
+#' @importFrom WeightedROC WeightedAUC WeightedROC
 NULL
 
 
@@ -225,7 +225,7 @@ getPerformanceMeasures <- function(y, p, w=NULL) {
   nClasses <- length(unique(y))
   if (nClasses==2) {
     if (is.null(w))
-      pAuc <- as.numeric(pROC::auc(pROC::roc(y, p, direction='<', quiet=T)))
+      pAuc <- as.numeric(auc(roc(y, p, direction='<', quiet=T)))
     else
       pAuc <- WeightedAUC(WeightedROC(p, y, w))
     pLogLike <- WeightedLogLike(y, p, w)
