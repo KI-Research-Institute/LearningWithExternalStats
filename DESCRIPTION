@@ -5,13 +5,14 @@ Authors@R:
     person("Tal", "El Hay", , "talelh@kinstitute.org.il", role = c("aut", "cre"),
            comment = c(ORCID = "YOUR-ORCID-ID"))
 Description: Currently the package focuses on evaluation performance of a model in an external dataset using internal data and statsitics from the external dataset. The core function reweights the internal data to have statistics that match the external statistics.
-License: Apache License (>= 2)
+License: file LICENSE
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.2.1
 Imports: 
     CVXR,
     glue,
+    ParallelLogger,
     pROC,
     stats,
     WeightedROC
