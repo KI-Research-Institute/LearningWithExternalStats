@@ -1,6 +1,8 @@
-library(stats)
-library(pROC)
-library(WeightedROC)
+#' @import stats
+#' @import pROC
+#' @import WeightedROC
+NULL
+
 
 #' evaluation from external stats
 

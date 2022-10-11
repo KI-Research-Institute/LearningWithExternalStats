@@ -14,14 +14,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-#' ReweightDB
-#'
-#' @title Reweight an internal database to match the means of an external one.
-#'
-#' @description A package for reweighting a dataset to match the statistics of an external one
-#'
-#' @docType package
-#' @name ReweightDB
 #' @import CVXR
 #' @import glue
 NULL
