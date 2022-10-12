@@ -1,0 +1,90 @@
+2022-10-12 16:41:09	[Main thread]	INFO	PatientLevelPrediction	externalValidateDbPlp	Validating model on 
+2022-10-12 16:41:10	[Main thread]	INFO	FeatureExtraction		Constructing features on server
+2022-10-12 16:41:13	[Main thread]	INFO	FeatureExtraction		Fetching data from server
+2022-10-12 16:41:14	[Main thread]	INFO	FeatureExtraction		Fetching data took 1.17 secs
+2022-10-12 16:41:16	[Main thread]	INFO	PatientLevelPrediction		Outcome is 0 or 1
+2022-10-12 16:41:16	[Main thread]	INFO	PatientLevelPrediction		No sampling - returning same data
+2022-10-12 16:41:17	[Main thread]	INFO	PatientLevelPrediction		Removing infrequent and redundant covariates and normalizing
+2022-10-12 16:41:18	[Main thread]	INFO	PatientLevelPrediction		Prediction took 0.214 secs
+2022-10-12 16:41:18	[Main thread]	INFO	PatientLevelPrediction	getEvaluationStatistics_binary	Calculating Performance for Validation
+2022-10-12 16:41:18	[Main thread]	INFO	PatientLevelPrediction	getEvaluationStatistics_binary	=============
+2022-10-12 16:41:18	[Main thread]	INFO	PatientLevelPrediction	getEvaluationStatistics_binary	AUC                 73.41
+2022-10-12 16:41:18	[Main thread]	INFO	PatientLevelPrediction	getEvaluationStatistics_binary	95% lower AUC:      70.49
+2022-10-12 16:41:18	[Main thread]	INFO	PatientLevelPrediction	getEvaluationStatistics_binary	95% upper AUC:      76.33
+2022-10-12 16:41:18	[Main thread]	INFO	PatientLevelPrediction	getEvaluationStatistics_binary	AUPRC:              41.62
+2022-10-12 16:41:18	[Main thread]	INFO	PatientLevelPrediction	getEvaluationStatistics_binary	Brier:              0.14
+2022-10-12 16:41:18	[Main thread]	INFO	PatientLevelPrediction	getEvaluationStatistics_binary	Eavg:               0.02
+2022-10-12 16:41:22	[Main thread]	INFO	PatientLevelPrediction	getEvaluationStatistics_binary	Calibration in large- Mean predicted risk 0.2013 : observed risk 0.2009
+2022-10-12 16:41:24	[Main thread]	INFO	PatientLevelPrediction	getEvaluationStatistics_binary	Calibration in large- Intercept -0.0027
+2022-10-12 16:41:24	[Main thread]	INFO	PatientLevelPrediction	getEvaluationStatistics_binary	Weak calibration intercept: 0.1142 - gradient:1.0989
+2022-10-12 16:41:24	[Main thread]	INFO	PatientLevelPrediction	getEvaluationStatistics_binary	Hosmer-Lemeshow calibration gradient: 1.07 intercept:         -0.01
+2022-10-12 16:41:24	[Main thread]	INFO	PatientLevelPrediction	getEvaluationStatistics_binary	Average Precision:  0.42
+2022-10-12 16:41:24	[Main thread]	INFO	PatientLevelPrediction	getEvaluationStatistics_binary	Calculating Performance for weakRecalibration
+2022-10-12 16:41:24	[Main thread]	INFO	PatientLevelPrediction	getEvaluationStatistics_binary	=============
+2022-10-12 16:41:24	[Main thread]	INFO	PatientLevelPrediction	getEvaluationStatistics_binary	AUC                 73.41
+2022-10-12 16:41:24	[Main thread]	INFO	PatientLevelPrediction	getEvaluationStatistics_binary	95% lower AUC:      70.49
+2022-10-12 16:41:24	[Main thread]	INFO	PatientLevelPrediction	getEvaluationStatistics_binary	95% upper AUC:      76.33
+2022-10-12 16:41:24	[Main thread]	INFO	PatientLevelPrediction	getEvaluationStatistics_binary	AUPRC:              41.62
+2022-10-12 16:41:24	[Main thread]	INFO	PatientLevelPrediction	getEvaluationStatistics_binary	Brier:              0.14
+2022-10-12 16:41:24	[Main thread]	INFO	PatientLevelPrediction	getEvaluationStatistics_binary	Eavg:               0.01
+2022-10-12 16:41:24	[Main thread]	INFO	PatientLevelPrediction	getEvaluationStatistics_binary	Calibration in large- Mean predicted risk 0.2009 : observed risk 0.2009
+2022-10-12 16:41:24	[Main thread]	INFO	PatientLevelPrediction	getEvaluationStatistics_binary	Calibration in large- Intercept 0
+2022-10-12 16:41:24	[Main thread]	INFO	PatientLevelPrediction	getEvaluationStatistics_binary	Weak calibration intercept: 0 - gradient:1
+2022-10-12 16:41:24	[Main thread]	INFO	PatientLevelPrediction	getEvaluationStatistics_binary	Hosmer-Lemeshow calibration gradient: 0.98 intercept:         0.01
+2022-10-12 16:41:24	[Main thread]	INFO	PatientLevelPrediction	getEvaluationStatistics_binary	Average Precision:  0.42
+2022-10-12 16:41:26	[Main thread]	INFO	PatientLevelPrediction	covariateSummary	Calculating covariate summary @ 2022-10-12 16:41:26
+2022-10-12 16:41:26	[Main thread]	INFO	PatientLevelPrediction	covariateSummary	This can take a while...
+2022-10-12 16:41:26	[Main thread]	INFO	PatientLevelPrediction	createCovariateSubsets	Creating binary labels
+2022-10-12 16:41:26	[Main thread]	INFO	PatientLevelPrediction	createCovariateSubsets	calculating subset of strata 1
+2022-10-12 16:41:26	[Main thread]	INFO	PatientLevelPrediction	createCovariateSubsets	calculating subset of strata 2
+2022-10-12 16:41:26	[Main thread]	INFO	PatientLevelPrediction		Restricting to subgroup
+2022-10-12 16:41:26	[Main thread]	INFO	PatientLevelPrediction		Calculating summary for subgroup WithNoOutcome
+2022-10-12 16:41:27	[Main thread]	INFO	PatientLevelPrediction		Restricting to subgroup
+2022-10-12 16:41:27	[Main thread]	INFO	PatientLevelPrediction		Calculating summary for subgroup WithOutcome
+2022-10-12 16:41:28	[Main thread]	INFO	PatientLevelPrediction	aggregateCovariateSummaries	Aggregating with only labels or strata
+2022-10-12 16:41:29	[Main thread]	INFO	PatientLevelPrediction	covariateSummary	Finished covariate summary @ 2022-10-12 16:41:29
+2022-10-12 16:42:09	[Main thread]	INFO	PatientLevelPrediction	externalValidateDbPlp	Validating model on 
+2022-10-12 16:42:09	[Main thread]	INFO	FeatureExtraction		Constructing features on server
+2022-10-12 16:42:11	[Main thread]	INFO	FeatureExtraction		Fetching data from server
+2022-10-12 16:42:12	[Main thread]	INFO	FeatureExtraction		Fetching data took 1.08 secs
+2022-10-12 16:42:14	[Main thread]	INFO	PatientLevelPrediction		Outcome is 0 or 1
+2022-10-12 16:42:14	[Main thread]	INFO	PatientLevelPrediction		No sampling - returning same data
+2022-10-12 16:42:14	[Main thread]	INFO	PatientLevelPrediction		Removing infrequent and redundant covariates and normalizing
+2022-10-12 16:42:16	[Main thread]	INFO	PatientLevelPrediction		Prediction took 0.178 secs
+2022-10-12 16:42:16	[Main thread]	INFO	PatientLevelPrediction	getEvaluationStatistics_binary	Calculating Performance for Validation
+2022-10-12 16:42:16	[Main thread]	INFO	PatientLevelPrediction	getEvaluationStatistics_binary	=============
+2022-10-12 16:42:16	[Main thread]	INFO	PatientLevelPrediction	getEvaluationStatistics_binary	AUC                 55.58
+2022-10-12 16:42:16	[Main thread]	INFO	PatientLevelPrediction	getEvaluationStatistics_binary	95% lower AUC:      50.23
+2022-10-12 16:42:16	[Main thread]	INFO	PatientLevelPrediction	getEvaluationStatistics_binary	95% upper AUC:      60.92
+2022-10-12 16:42:16	[Main thread]	INFO	PatientLevelPrediction	getEvaluationStatistics_binary	AUPRC:              16.76
+2022-10-12 16:42:16	[Main thread]	INFO	PatientLevelPrediction	getEvaluationStatistics_binary	Brier:              0.14
+2022-10-12 16:42:16	[Main thread]	INFO	PatientLevelPrediction	getEvaluationStatistics_binary	Eavg:               0.07
+2022-10-12 16:42:16	[Main thread]	INFO	PatientLevelPrediction	getEvaluationStatistics_binary	Calibration in large- Mean predicted risk 0.1453 : observed risk 0.1529
+2022-10-12 16:42:16	[Main thread]	INFO	PatientLevelPrediction	getEvaluationStatistics_binary	Calibration in large- Intercept 0.0642
+2022-10-12 16:42:16	[Main thread]	INFO	PatientLevelPrediction	getEvaluationStatistics_binary	Weak calibration intercept: -1.3714 - gradient:0.1814
+2022-10-12 16:42:16	[Main thread]	INFO	PatientLevelPrediction	getEvaluationStatistics_binary	Hosmer-Lemeshow calibration gradient: 0.16 intercept:         0.13
+2022-10-12 16:42:16	[Main thread]	INFO	PatientLevelPrediction	getEvaluationStatistics_binary	Average Precision:  0.17
+2022-10-12 16:42:16	[Main thread]	INFO	PatientLevelPrediction	getEvaluationStatistics_binary	Calculating Performance for weakRecalibration
+2022-10-12 16:42:16	[Main thread]	INFO	PatientLevelPrediction	getEvaluationStatistics_binary	=============
+2022-10-12 16:42:16	[Main thread]	INFO	PatientLevelPrediction	getEvaluationStatistics_binary	AUC                 55.58
+2022-10-12 16:42:16	[Main thread]	INFO	PatientLevelPrediction	getEvaluationStatistics_binary	95% lower AUC:      50.23
+2022-10-12 16:42:16	[Main thread]	INFO	PatientLevelPrediction	getEvaluationStatistics_binary	95% upper AUC:      60.92
+2022-10-12 16:42:16	[Main thread]	INFO	PatientLevelPrediction	getEvaluationStatistics_binary	AUPRC:              16.76
+2022-10-12 16:42:16	[Main thread]	INFO	PatientLevelPrediction	getEvaluationStatistics_binary	Brier:              0.13
+2022-10-12 16:42:16	[Main thread]	INFO	PatientLevelPrediction	getEvaluationStatistics_binary	Eavg:               0.02
+2022-10-12 16:42:16	[Main thread]	INFO	PatientLevelPrediction	getEvaluationStatistics_binary	Calibration in large- Mean predicted risk 0.1529 : observed risk 0.1529
+2022-10-12 16:42:16	[Main thread]	INFO	PatientLevelPrediction	getEvaluationStatistics_binary	Calibration in large- Intercept 0
+2022-10-12 16:42:16	[Main thread]	INFO	PatientLevelPrediction	getEvaluationStatistics_binary	Weak calibration intercept: 0 - gradient:1
+2022-10-12 16:42:16	[Main thread]	INFO	PatientLevelPrediction	getEvaluationStatistics_binary	Hosmer-Lemeshow calibration gradient: 1.16 intercept:         -0.02
+2022-10-12 16:42:16	[Main thread]	INFO	PatientLevelPrediction	getEvaluationStatistics_binary	Average Precision:  0.17
+2022-10-12 16:42:17	[Main thread]	INFO	PatientLevelPrediction	covariateSummary	Calculating covariate summary @ 2022-10-12 16:42:17
+2022-10-12 16:42:17	[Main thread]	INFO	PatientLevelPrediction	covariateSummary	This can take a while...
+2022-10-12 16:42:17	[Main thread]	INFO	PatientLevelPrediction	createCovariateSubsets	Creating binary labels
+2022-10-12 16:42:17	[Main thread]	INFO	PatientLevelPrediction	createCovariateSubsets	calculating subset of strata 1
+2022-10-12 16:42:20	[Main thread]	INFO	PatientLevelPrediction	createCovariateSubsets	calculating subset of strata 2
+2022-10-12 16:42:20	[Main thread]	INFO	PatientLevelPrediction		Restricting to subgroup
+2022-10-12 16:42:20	[Main thread]	INFO	PatientLevelPrediction		Calculating summary for subgroup WithNoOutcome
+2022-10-12 16:42:21	[Main thread]	INFO	PatientLevelPrediction		Restricting to subgroup
+2022-10-12 16:42:21	[Main thread]	INFO	PatientLevelPrediction		Calculating summary for subgroup WithOutcome
+2022-10-12 16:42:23	[Main thread]	INFO	PatientLevelPrediction	aggregateCovariateSummaries	Aggregating with only labels or strata
+2022-10-12 16:42:23	[Main thread]	INFO	PatientLevelPrediction	covariateSummary	Finished covariate summary @ 2022-10-12 16:42:23

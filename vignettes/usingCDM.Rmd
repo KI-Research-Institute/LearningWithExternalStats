@@ -140,3 +140,26 @@ tstIdx <- lrResults$prediction$evaluationType == 'Test'
 cat('Outcome proportion:       ', mean(lrResults$prediction[tstIdx, 'outcomeCount']), '\n')
 cat('Mean predicted proportion:', mean(lrResults$prediction[tstIdx, 'value']), '\n')  # predicted probability
 ```
+External validation
+```{r}
+externalDatabaseDetailes <- createDatabaseDetails(
+  connectionDetails = connectionDetails,
+  cdmDatabaseSchema = "main",
+  cdmDatabaseName = '',
+  cdmDatabaseId = '',  # ?
+  tempEmulationSchema = NULL,  # is this important to avoid further errors in getPlpData?
+  cohortDatabaseSchema = "main",
+  cohortTable = "cohort",
+  targetId = 2,
+  outcomeDatabaseSchema = "main",
+  outcomeTable = "cohort",
+  outcomeIds = 3,
+  cdmVersion = 5  #?
+)
+
+
+resultsExternal <- externalValidateDbPlp(
+  lrResults$model,
+  validationDatabaseDetails = externalDatabaseDetailes
+)
+```
