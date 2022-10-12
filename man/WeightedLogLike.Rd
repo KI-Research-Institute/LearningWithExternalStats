@@ -9,7 +9,7 @@ WeightedLogLike(Y, p, w = NULL)
 \arguments{
 \item{Y}{a vector of binary labels}
 
-\item{p}{a vector of numeric predictions (assuming in the range \link{0,1})}
+\item{p}{a vector of numeric predictions (assuming in the range \eqn{[0,1]})}
 
 \item{w}{a vector of non-negative weights}
 }

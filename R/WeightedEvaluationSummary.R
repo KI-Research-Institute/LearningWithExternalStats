@@ -1,19 +1,20 @@
 # @file WeightedEvaluationSummary.R
 #
+NULL
 
 #' Compute weighted log-likelihood
-#' 
-#' @description compute weighted log-likelihood of a binary classifier predictions with respect to true labels 
-#' 
+#'
+#' @description compute weighted log-likelihood of a binary classifier predictions with respect to true labels
+#'
 #' @param Y a vector of binary labels
-#' @param p a vector of numeric predictions (assuming in the range [0,1])
+#' @param p a vector of numeric predictions (assuming in the range \eqn{[0,1]})
 #' @param w a vector of non-negative weights
-#' 
+#'
 #' @return weighted log-likelihood
-#' 
+#'
 #' @export
 WeightedLogLike <- function(Y, p, w=NULL) {
-  if (is.factor(Y)) 
+  if (is.factor(Y))
     Y <- as.numeric(Y)-1
   # handle zero likelihood instances
   idx0 <- (Y==0 & p==0) | (Y==1 & p==1)  # TODO consider a slack here
@@ -28,7 +29,7 @@ WeightedLogLike <- function(Y, p, w=NULL) {
 
 
 WeightedBrier <- function(Y, p, w=NULL) {
-  if (is.factor(Y)) 
+  if (is.factor(Y))
     Yn <- as.numeric(Y)-1
   else
     Yn <- Y
@@ -49,7 +50,7 @@ meanPredictionRisk <- function(p, w=NULL) {
 
 
 meanObservedRisk <- function(Y, w=NULL) {
-  if (is.factor(Y)) 
+  if (is.factor(Y))
     Yn <- as.numeric(Y)-1
   else
     Yn <- Y

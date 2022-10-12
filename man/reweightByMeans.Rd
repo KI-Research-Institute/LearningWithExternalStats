@@ -31,7 +31,13 @@ databse.}
 
 \item{minSd}{minimum variance for a columns to be included}
 
+\item{minW}{mimimum weight}
+
+\item{distance}{distance between means, either 'l1' or 'l2'}
+
 \item{optimizationMethod}{primal or dual. Currently dual works only with entropy divergence}
+
+\item{verbose}{a boolean flag for output messages}
 }
 \value{
 A vector of weights

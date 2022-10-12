@@ -38,9 +38,10 @@ NULL
 #' 'chi2' is \eqn{\sum_i{w_i-\frac{1}{n}}**2}
 #' @param lambda lambda - regularization parameter
 #' @param minSd minimum variance for a columns to be included
-#'
-#'
+#' @param minW mimimum weight
+#' @param distance distance between means, either 'l1' or 'l2'
 #' @param optimizationMethod primal or dual. Currently dual works only with entropy divergence
+#' @param verbose a boolean flag for output messages
 #'
 #' @return
 #' A vector of weights
@@ -51,7 +52,6 @@ reweightByMeans <- function(
   verbose=FALSE) {
   # TODO in the regularized case, hyper param may depend on the number of features/samples
   # Find optimal weights
-
   if (optimizationMethod == 'primal')
     w_hat <- primalReweightByMeans(Z, mu, divergence, lambda, minSd, minW, distance, verbose)
   else
@@ -64,6 +64,7 @@ reweightByMeans <- function(
                 mean_w, sd(w_hat), min_w, max(w_hat)))
   if ((!is.na(min_w)) & (min_w < 0)) {
     warning("Trimming negative weights to zero")
+    n <- nrow(Z)
     w_hat[w_hat<0] <- minW/n
   }
   return (w_hat)
@@ -138,17 +139,18 @@ primalReweightByMeans <- function(Z, mu, divergence,lambda, minSd, minW, distanc
 #' minimizing the divergence between the distribution of the weights and the
 #' uniform distribution.
 #'
-#' @param Z a data frame where every row stores a sample of the internal
-#' databse.
+#' @param Z a data frame where every row stores a sample of the internal databse.
 #' @param mu a vector of means of the internal dataset.
 #' @param lambda lambda - regularization parameter
 #' @param minSd minimum variance for a columns to be included
+#' @param minW mimimum weight
+#' @param verbose a boolean flag for output messages
 #'
 #' @return
 #' A vector of weights
 #'
-dualReweightByMeans <- function(X, mu, lambda, minSd, minW, verbose) {
-  normalized <- normalizeDataAndExpectations(X, mu, minSd)
+dualReweightByMeans <- function(Z, mu, lambda, minSd, minW, verbose) {
+  normalized <- normalizeDataAndExpectations(Z, mu, minSd)
   m <- ncol(normalized$Z)
   n <- nrow(normalized$Z)
 
@@ -160,7 +162,7 @@ dualReweightByMeans <- function(X, mu, lambda, minSd, minW, verbose) {
     problem <- Problem(objective)
   else {
     constr <- list(norm2(nu[1:m]) <= (1/lambda))
-    problem <- Problem(objective, constr = constr)
+    problem <- Problem(objective, constraints = constr)
   }
   result <- solve(problem)
 
