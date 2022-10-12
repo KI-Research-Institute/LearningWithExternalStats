@@ -3,6 +3,7 @@
 export(WeightedLogLike)
 export(computeMaxSMD)
 export(computeTable1LikeTransformation)
+export(estimateInternalPerformance)
 export(reweightByMeans)
 import(CVXR)
 import(ParallelLogger)

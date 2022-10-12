@@ -248,6 +248,7 @@ getPerformanceMeasures <- function(y, p, w=NULL) {
 #' @param p probabilities vector
 #' @param nboot number of bootstrap repetitions
 #'
+#' @export
 estimateInternalPerformance <- function(y, p, nboot) {
   dbRes <- list()
   dbRes[['n']] <- length(y)

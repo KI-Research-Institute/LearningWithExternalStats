@@ -16,3 +16,8 @@ Imports:
     pROC,
     stats,
     WeightedROC
+Suggests:
+	knitr,
+    rmarkdown
+VignetteBuilder: knitr
+
