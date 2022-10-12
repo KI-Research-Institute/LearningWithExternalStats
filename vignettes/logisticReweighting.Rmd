@@ -1,8 +1,8 @@
 ---
-title: "Reweighting example with a logisitic model"
+title: "Evaluation using external statistics - example with a logisitic model"
 output: rmarkdown::html_vignette
 vignette: >
-  %\VignetteIndexEntry{logisticReweighting}
+  %\VignetteIndexEntry{Evaluation using external statistics - example with a logisitic model}
   %\VignetteEncoding{UTF-8}
   %\VignetteEngine{knitr::rmarkdown}
 editor_options: 
@@ -83,21 +83,15 @@ minW <- 1e-6
 optimizationMethod <- 'dual'
 ```
 
-Now we are ready to re-weight:
+Now we are ready to estimate:
 
 ```{r}
-w <- reweightByMeans(
-  dBalanceInt, muExt, divergence = divergence, lambda = lambda, minW = minW, optimizationMethod=optimizationMethod,
-  verbose = T)
-```
-
-Using the weights we compute the enropy and the weighted AUC:
-
-```{r}
-p <- w/length(w)  # normalize for entropy computation
-cat(glue('Weight entropy = {format(- t(p) %*% log(p), digits=3)}'),'\n')
-wauc <- WeightedAUC(WeightedROC(pInternal, dIntTest[['Y']], w))
-cat(glue('Estimated AUC = {format(wauc, digits=3)}'),'\n')
+internalData <- list(z=dBalanceInt, p = pInternal, y = dIntTest[['Y']])
+estimatedResults <- estimateExternalPerformanceFromStats(
+  internalData, muExt, divergence = divergence, lambda = lambda, minW = minW, optimizationMethod = optimizationMethod, 
+  nboot = 0)
+cat(glue('KL divergence between estimated weights and uniform ones = {format(estimatedResults$summary$kl, digits=3)}'),'\n')
+cat(glue('Estimated AUC = {format(estimatedResults$summary$AUC, digits=3)}'),'\n')
 ```
 
 The entropy is a measure of the distance between the original and

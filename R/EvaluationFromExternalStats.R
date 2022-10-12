@@ -11,7 +11,11 @@ NULL
 
 #' Estimate external performance from statistics
 #'
-#' @description Estimate external performance using external statistics and an internal dataset
+#' @description Estimate external performance using external statistics and an internal dataset.
+#' This function reweights the internal z matrix with the objective to make the weighted means as close as
+#' possible to the external means represented by mu. Performance measures are estimated using the resulting
+#' weights, the vector of actual outcomes y, and the predicted outcome probabilities p.
+#'
 #'
 #' @param internalData a list that includes internal data and predictions with the following fields:
 #'   z: a data frame of transformed feature-outcome pairs
@@ -25,6 +29,8 @@ NULL
 #' 'chi2' is \eqn{\sum_i{w_i-\frac{1}{n}}**2}
 #' @param lambda lambda - regularization parameter
 #' @param minSd minimum variance for a columns to be included
+#' @param minW minimum weight
+#' @param distance distance between means -- l1 or l2.
 #' @param optimizationMethod primal or dual. Currently dual works only with entropy divergence
 #' @param maxProp maximum proportion between external and internal means
 #' @param nboot number of bootstrap repetitions for confidence interval assessment
@@ -35,17 +41,12 @@ NULL
 #'   preDiagnosis: more detailed pre-reweighing diagnosis information.
 #'   bootstrap: a data frame of results of single bootstrap repetitions
 #'
-#' This function reweights the internal z matrix with the objective to make the weighted means as close as
-#' possible to the external means represented by mu. Performance measures are estimated using the resulting
-#' weights, the vector of actual outcomes y, and the predicted outcome probabilities p.
-#'
-#'
+#' @export
 estimateExternalPerformanceFromStats <- function(
     internalData, externalStats,
     divergence = "entropy", lambda = 1e-06, minSd = 1e-04,
     minW = 1e-06, distance = "l2", optimizationMethod = "primal",
     maxProp = 500, nboot=10) {
-  #' check the type of internal data, if in plp format, convert to
   dbRes <- list()
   # Pre diagnostics
   preD <- preDiagnostics(internalData$z, externalStats, maxProp)
@@ -110,26 +111,31 @@ estimateExternalPerformanceFromStats <- function(
 #' @param z a data frame of transformed feature-outcome pairs
 #' @param mu a vector of means of transformed feature-outcome pairs
 #' @param maxProp maximum proportion between internal and external means to determine imbalance
+#' @param verbose Boolean indicator for logging
 #'
 #' @return a named list with the following fields:
 #'   representedfeatured: a vecotr of represented feature names
 #'   zidx: indices of valid subjects
 #'   imbalanced: indicators of imbalance
-preDiagnostics <- function(z, mu, maxProp, verbose=T) {
+preDiagnostics <- function(z, mu, maxProp, verbose=F) {
   # remove features with Na entries in table1
   representedFeatures <- names(mu[(!is.na(mu))] )
-  ParallelLogger::logInfo(glue("Dataset has {length(representedFeatures)} non-na entries"), "\n")
+  if (verbose)
+    ParallelLogger::logInfo(glue("Dataset has {length(representedFeatures)} non-na entries"), "\n")
   n1 <- nrow(z)
   removeUnrepresentedSubjects = T
   # TODO the following code assumes all entries represent proportions
   if (sum(mu[representedFeatures]==0)>0 & removeUnrepresentedSubjects) {
-    ParallelLogger::logInfo(
-      paste('Removing subjects with unrepresented propertis:', paste(mu[mu==0], collapse = ' '), sep = ' '))
+    if (verbose)
+      ParallelLogger::logInfo(
+        paste('Removing subjects with unrepresented propertis:', paste(mu[mu==0], collapse = ' '), sep = ' '))
     zidx <- rowSums(abs(z[, mu==0]))==0
     representedFeatures <- representedFeatures[mu[representedFeatures] != 0]
-    ParallelLogger::logInfo(glue('Maintained {sum(zidx)}/{n1} subjects.\n'))
+    if (verbose)
+      ParallelLogger::logInfo(glue('Maintained {sum(zidx)}/{n1} subjects.\n'))
   } else {
-    cat('Number of rows', n1, '\n')
+    if (verbose)
+      cat('Number of rows', n1, '\n')
     zidx = rep(TRUE, n1)
   }
 

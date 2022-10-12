@@ -15,6 +15,27 @@ primalReweightByMeans(
   verbose
 )
 }
+\arguments{
+\item{Z}{a data frame where every row stores a sample of the internal
+databse.}
+
+\item{mu}{a vector of means of the external dataset.}
+
+\item{divergence}{'entropy' or 'chi2'.
+'entropy' directs the algorithm to minimize the negative entropy,
+\eqn{-\sum_i w_i \log w_i}.
+'chi2' is \eqn{\sum_i{w_i-\frac{1}{n}}**2}}
+
+\item{lambda}{lambda - regularization parameter}
+
+\item{minSd}{minimum variance for a columns to be included}
+
+\item{minW}{mimimum weight}
+
+\item{distance}{distance between means, either 'l1' or 'l2'}
+
+\item{verbose}{a boolean flag for output messages}
+}
 \value{
 A vector of weights
 }
@@ -25,6 +46,4 @@ It returns a set of sample weights such that the weighted means of the
 columns of Z are as close as possible to the elements of mu while
 minimizing the divergence between the distribution of the weights and the
 uniform distribution.
-
-SEE THE PARENT FUNCTION
 }

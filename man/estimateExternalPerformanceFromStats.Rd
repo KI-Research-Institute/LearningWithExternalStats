@@ -36,6 +36,10 @@ Reweighing algorithm parameters:}
 
 \item{minSd}{minimum variance for a columns to be included}
 
+\item{minW}{minimum weight}
+
+\item{distance}{distance between means -- l1 or l2.}
+
 \item{optimizationMethod}{primal or dual. Currently dual works only with entropy divergence}
 
 \item{maxProp}{maximum proportion between external and internal means}
@@ -48,13 +52,10 @@ summary: a name list with pre-weighting diagnostics, post-weighting diagnostics,
 and bootstrap based performance measures.
 preDiagnosis: more detailed pre-reweighing diagnosis information.
 bootstrap: a data frame of results of single bootstrap repetitions
-
+}
+\description{
+Estimate external performance using external statistics and an internal dataset.
 This function reweights the internal z matrix with the objective to make the weighted means as close as
 possible to the external means represented by mu. Performance measures are estimated using the resulting
 weights, the vector of actual outcomes y, and the predicted outcome probabilities p.
-
-check the type of internal data, if in plp format, convert to
-}
-\description{
-Estimate external performance using external statistics and an internal dataset
 }

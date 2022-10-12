@@ -3,7 +3,7 @@ Title: Machine learning algorithms that exploit external statistics in addition 
 Version: 0.0.0.9000
 Authors@R: 
     person("Tal", "El Hay", , "talelh@kinstitute.org.il", role = c("aut", "cre"),
-           comment = c(ORCID = "YOUR-ORCID-ID"))
+           comment = c(ORCID = "0000-0002-2156-1558"))
 Description: Currently the package focuses on evaluation performance of a model in an external dataset using internal data and statsitics from the external dataset. The core function reweights the internal data to have statistics that match the external statistics.
 License: file LICENSE
 Encoding: UTF-8
@@ -18,6 +18,6 @@ Imports:
     WeightedROC
 Suggests:
 	knitr,
-    rmarkdown
+    rmarkdown,
+	glmnet
 VignetteBuilder: knitr
-

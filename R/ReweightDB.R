@@ -83,7 +83,18 @@ reweightByMeans <- function(
 #' uniform distribution.
 #'
 #'
-#' SEE THE PARENT FUNCTION
+#' @param Z a data frame where every row stores a sample of the internal
+#' databse.
+#' @param mu a vector of means of the external dataset.
+#' @param divergence 'entropy' or 'chi2'.
+#' 'entropy' directs the algorithm to minimize the negative entropy,
+#' \eqn{-\sum_i w_i \log w_i}.
+#' 'chi2' is \eqn{\sum_i{w_i-\frac{1}{n}}**2}
+#' @param lambda lambda - regularization parameter
+#' @param minSd minimum variance for a columns to be included
+#' @param minW mimimum weight
+#' @param distance distance between means, either 'l1' or 'l2'
+#' @param verbose a boolean flag for output messages
 #'
 #' @return
 #' A vector of weights
