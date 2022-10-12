@@ -54,15 +54,19 @@ databaseDetails <- createDatabaseDetails(
   cdmVersion = 5  #?
 )
 
+restrictPlpDataSettings <- createRestrictPlpDataSettings()  # sampleSize = 1000
+
 ```
 
 ```{r}
-restrictPlpDataSettings <- createRestrictPlpDataSettings()  # sampleSize = 1000
-plpData <- getPlpData(
-  databaseDetails = databaseDetails,
-  covariateSettings = covSettings,
-  restrictPlpDataSettings = restrictPlpDataSettings
-)
+plpData <- tryCatch(
+    { getPlpData(
+      databaseDetails = databaseDetails,
+      covariateSettings = covSettings,
+      restrictPlpDataSettings = restrictPlpDataSettings
+    )},
+    error = function(e){ParallelLogger::logInfo(e); return(NULL)}
+    )
 
 summary(plpData)
 ```
@@ -110,21 +114,24 @@ executeSettings = createExecuteSettings(
 ```
 Train the model
 ```{r}
-lrResults <- runPlp(
-  plpData = plpData,
-  outcomeId = 3,
-  analysisId = 'singleDemo',
-  analysisName = 'Demonstration of runPlp for training single PLP models',
-  populationSettings = populationSettings,
-  splitSettings = splitSettings,
-  sampleSettings = sampleSettings,
-  featureEngineeringSettings = featureEngineeringSettings,
-  preprocessSettings = preprocessSettings,
-  modelSettings = lrModel,
-  logSettings = createLogSettings(),
-  executeSettings = executeSettings,
-  saveDirectory = file.path(getwd(), 'singlePlp')
-)
+lrResults <- tryCatch(
+    {runPlp(
+      plpData = plpData,
+      outcomeId = 3,
+      analysisId = 'singleDemo',
+      analysisName = 'Demonstration of runPlp for training single PLP models',
+      populationSettings = populationSettings,
+      splitSettings = splitSettings,
+      sampleSettings = sampleSettings,
+      featureEngineeringSettings = featureEngineeringSettings,
+      preprocessSettings = preprocessSettings,
+      modelSettings = lrModel,
+      logSettings = createLogSettings(),
+      executeSettings = executeSettings,
+      saveDirectory = file.path(getwd(), 'singlePlp')
+    )},
+    error = function(e){ParallelLogger::logInfo(e); return(NULL)}
+    )
 ```
 Show results
 ```{r}
@@ -157,9 +164,10 @@ externalDatabaseDetailes <- createDatabaseDetails(
   cdmVersion = 5  #?
 )
 
-
-resultsExternal <- externalValidateDbPlp(
-  lrResults$model,
-  validationDatabaseDetails = externalDatabaseDetailes
+resultsExternal <- withCallingHandlers({
+  externalValidateDbPlp(
+    lrResults$model,
+    validationDatabaseDetails = externalDatabaseDetailes)},
+    error = function(e){ParallelLogger::logInfo(e); return(NULL)}
 )
 ```
