@@ -10,45 +10,48 @@ library(glue)
 # TODO extract test samples
 # TODO revive MaxSMD
 
-transformPlpDataToDataFrame <- function(plpData, populationSettings, outcomeId) {
-  #### new
-  if(!is.null(plpData)){
-    labels <- PatientLevelPrediction::createStudyPopulation(
-      plpData = plpData,
-      outcomeId = outcomeId,
-      populationSettings = populationSettings
-    )
-  }
-  # convert to matrix
-  dataObject <- PatientLevelPrediction::toSparseM(
-    plpData = plpData,
-    cohort = labels
+source('./extras/plpAdapter.R')
+
+# Definitions
+outcomeId <- 3
+internalTargetId <- 1  #
+externalTargetId <- 2
+
+
+
+summarizeResults <- function(s, evaluation) {
+  cat(evaluation, 'AUROC:', s[(s['metric']=='AUROC') & (s['evaluation']==evaluation), 'value'][[1]], '\n')
+
+  f <- c(
+    'populationSize',
+    'outcomeCount',
+    'AUROC',
+    '95% lower AUROC',
+    '95% upper AUROC',
+    # AUPRC
+    'brier score',
+    # brier score scaled
+    # Eavg
+    # E90
+    # Emax
+    'calibrationInLarge mean prediction',
+    'calibrationInLarge observed risk'
   )
-  #sparse matrix: dataObject$dataMatrix
-  #labels: dataObject$labels
-  columnDetails <- as.data.frame(dataObject$covariateRef)
 
-  cnames <- columnDetails$covariateName[order(columnDetails$columnId)]
+  print(format(s[(s['evaluation']==evaluation) & (s[['metric']] %in% f),c('metric', 'value')], digits=2))
 
-  ipMat <- as.matrix(dataObject$dataMatrix)
-  ipdata <- as.data.frame(ipMat)
-  colnames(ipdata) <-  makeFriendlyNames(cnames)
-  ipdata$outcome <- dataObject$labels$outcomeCount
-  return(ipdata)
+  # cat('Data size =', length(lrResults$prediction$evaluationType),'\n')
+  # for (s in unique(lrResults$prediction$evaluationType))
+  #   cat(s, '\t', sum(lrResults$prediction$evaluationType==s), '\n')
+  # cat('Outcome proportion:       ', mean(lrResults$prediction[tstIdx, 'outcomeCount']), '\n')
+  # cat('Mean predicted proportion:', mean(lrResults$prediction[tstIdx, 'value']), '\n')  # predicted probability
 }
 
-makeFriendlyNames <- function(columnNames){
-
-  columnNames <- gsub("[[:punct:]]", " ", columnNames)
-  columnNames <- gsub(" ", "_", columnNames)
-  return(columnNames)
-
-}
-
-
+# Activate Eunomia demo database
 connectionDetails <- Eunomia::getEunomiaConnectionDetails()
 Eunomia::createCohorts(connectionDetails)
 
+# Study setup
 covSettings <- createCovariateSettings(
   useDemographicsGender = TRUE,
   useDemographicsAge = TRUE,
@@ -68,15 +71,16 @@ databaseDetails <- createDatabaseDetails(
   tempEmulationSchema = NULL,  # is this important to avoid further errors in getPlpData?
   cohortDatabaseSchema = "main",
   cohortTable = "cohort",
-  targetId = 1,
+  targetId = internalTargetId,
   outcomeDatabaseSchema = "main",
   outcomeTable = "cohort",
-  outcomeIds = 3,
+  outcomeIds = outcomeId,
   cdmVersion = 5  #?
 )
 
 restrictPlpDataSettings <- createRestrictPlpDataSettings()  # sampleSize = 1000
 
+# Generate data
 plpData <- getPlpData(
     databaseDetails = databaseDetails,
     covariateSettings = covSettings,
@@ -84,6 +88,7 @@ plpData <- getPlpData(
 
 summary(plpData)
 
+# Prediction model definitions
 populationSettings <- createStudyPopulationSettings(
   washoutPeriod = 364,
   firstExposureOnly = FALSE,
@@ -123,9 +128,10 @@ executeSettings = createExecuteSettings(
   runCovariateSummary = T
 )
 
+# Train the model
 lrResults <- runPlp(
     plpData = plpData,
-    outcomeId = 3,
+    outcomeId = outcomeId,
     analysisId = 'singleDemo',
     analysisName = 'Demonstration of runPlp for training single PLP models',
     populationSettings = populationSettings,
@@ -139,18 +145,13 @@ lrResults <- runPlp(
     saveDirectory = file.path(getwd(), 'singlePlp')
   )
 
-s <- lrResults$performanceEvaluation$evaluationStatistics
-cat('Test AUROC:', s[(s['metric']=='AUROC') & (s['evaluation']=='Test'), 'value'][[1]], '\n')
 
 
-cat('Data size =', length(lrResults$prediction$evaluationType),'\n')
-for (s in unique(lrResults$prediction$evaluationType))
-  cat(s, '\t', sum(lrResults$prediction$evaluationType==s), '\n')
 tstIdx <- lrResults$prediction$evaluationType == 'Test'
 cvIdx <- lrResults$prediction$evaluationType == 'CV'
 trainIdx <- lrResults$prediction$evaluationType == 'Train'
-cat('Outcome proportion:       ', mean(lrResults$prediction[tstIdx, 'outcomeCount']), '\n')
-cat('Mean predicted proportion:', mean(lrResults$prediction[tstIdx, 'value']), '\n')  # predicted probability
+
+summarizeResults(lrResults$performanceEvaluation$evaluationStatistics, 'Test')
 
 externalDatabaseDetailes <- createDatabaseDetails(
   connectionDetails = connectionDetails,
@@ -160,10 +161,10 @@ externalDatabaseDetailes <- createDatabaseDetails(
   tempEmulationSchema = NULL,  # is this important to avoid further errors in getPlpData?
   cohortDatabaseSchema = "main",
   cohortTable = "cohort",
-  targetId = 2,
+  targetId = externalTargetId,
   outcomeDatabaseSchema = "main",
   outcomeTable = "cohort",
-  outcomeIds = 3,
+  outcomeIds = outcomeId,
   cdmVersion = 5  #?
 )
 
@@ -195,7 +196,7 @@ externalPlpData <- getPlpData(
   covariateSettings = covSettings,
   restrictPlpDataSettings = restrictPlpDataSettings)
 
-externalData <- transformPlpDataToDataFrame(externalPlpData, populationSettings, outcomeId = 3)
+externalData <- transformPlpDataToDataFrame(externalPlpData, populationSettings, outcomeId = outcomeId)
 
 
 covariateImportance <- lrResults$model$covariateImportance
@@ -206,8 +207,10 @@ estimationCovariates <- makeFriendlyNames(estimationCovariates)
 dim(trainData[estimationCovariates])
 dim(externalData[estimationCovariates])
 
-ZInt <- computeTable1LikeTransformation(trainData[c(estimationCovariates, 'outcome')], outcomeBalance = T, outcomeCol = 'outcome')
-zext <- computeTable1LikeTransformation(externalData[c(estimationCovariates, 'outcome')], outcomeBalance = T, outcomeCol = 'outcome')
+ZInt <- computeTable1LikeTransformation(
+  trainData[c(estimationCovariates, 'outcome')], outcomeBalance = T, outcomeCol = 'outcome')
+zext <- computeTable1LikeTransformation(
+  externalData[c(estimationCovariates, 'outcome')], outcomeBalance = T, outcomeCol = 'outcome')
 
 muExt <- colMeans(zext)
 
@@ -231,7 +234,14 @@ internalData <- list(z=ZInt, p = prediction$value, y = trainData[['outcome']])
 estimatedResults <- estimateExternalPerformanceFromStats(
   internalData, muExt, divergence = divergence, lambda = lambda, minW = minW, optimizationMethod = optimizationMethod,
   nboot = 0)
+summarizeResults(lrResults$performanceEvaluation$evaluationStatistics, 'Test')
+summarizeResults(resultsExternal[[2]]$performanceEvaluation$evaluationStatistics, 'Validation')
+
+# TODO change into a data-frame
 cat(glue('KL divergence between estimated weights and uniform ones = {format(estimatedResults$summary$kl, digits=3)}'),'\n')
-cat(glue('Estimated AUC = {format(estimatedResults$summary$AUC, digits=3)}'),'\n')
+cat(glue('Estimated AUC   = {format(estimatedResults$summary$AUC, digits=3)}'),'\n')
+cat(glue('Estimated Brier = {format(estimatedResults$summary$Brier, digits=3)}'),'\n')
+cat(glue('Predicted Risk  = {format(estimatedResults$summary$predictedR, digits=3)}'),'\n')
+cat(glue('Estimated Risk  = {format(estimatedResults$summary$observedR, digits=3)}'),'\n')
 
 
