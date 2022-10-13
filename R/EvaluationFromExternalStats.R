@@ -192,7 +192,7 @@ postDiagnostics <- function(w, z, mu) {
   klIdx <- p>0
   kl <- log(n) + t(p[klIdx]) %*% log(p[klIdx])
   chi2ToUnif <- n*sum((p-1/n)**2)  #  = \sum(p-1/n)^2/1/n
-  maxWeightedSMD <- computeMaxSMD(mu, z, p)
+  maxWeightedSMD <- 0 # TODO computeMaxSMD(mu, z, p)
 
   diagnostics <- list(maxw=max(w), 'chi2-u' = chi2ToUnif, kl = kl, maxWeightedSMD=maxWeightedSMD)  # TODO add diagnostics
   return(diagnostics)

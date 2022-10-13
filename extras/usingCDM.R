@@ -1,8 +1,50 @@
+rm(list = ls())
+
 library(LearningWithExternalStats)
 library(Eunomia)  # v1.0.2
 library(FeatureExtraction)  # v3.2.0
 library(PatientLevelPrediction)  # v6.0.4
 library(Rmpfr); library(Matrix); library(dbplyr)  # To avoid Found more than one class "atomicVector" in cache; using the first, from namespace 'Matrix'?
+library(glue)
+
+# TODO extract test samples
+# TODO revive MaxSMD
+
+transformPlpDataToDataFrame <- function(plpData, populationSettings, outcomeId) {
+  #### new
+  if(!is.null(plpData)){
+    labels <- PatientLevelPrediction::createStudyPopulation(
+      plpData = plpData,
+      outcomeId = outcomeId,
+      populationSettings = populationSettings
+    )
+  }
+  # convert to matrix
+  dataObject <- PatientLevelPrediction::toSparseM(
+    plpData = plpData,
+    cohort = labels
+  )
+  #sparse matrix: dataObject$dataMatrix
+  #labels: dataObject$labels
+  columnDetails <- as.data.frame(dataObject$covariateRef)
+
+  cnames <- columnDetails$covariateName[order(columnDetails$columnId)]
+
+  ipMat <- as.matrix(dataObject$dataMatrix)
+  ipdata <- as.data.frame(ipMat)
+  colnames(ipdata) <-  makeFriendlyNames(cnames)
+  ipdata$outcome <- dataObject$labels$outcomeCount
+  return(ipdata)
+}
+
+makeFriendlyNames <- function(columnNames){
+
+  columnNames <- gsub("[[:punct:]]", " ", columnNames)
+  columnNames <- gsub(" ", "_", columnNames)
+  return(columnNames)
+
+}
+
 
 connectionDetails <- Eunomia::getEunomiaConnectionDetails()
 Eunomia::createCohorts(connectionDetails)
@@ -105,6 +147,8 @@ cat('Data size =', length(lrResults$prediction$evaluationType),'\n')
 for (s in unique(lrResults$prediction$evaluationType))
   cat(s, '\t', sum(lrResults$prediction$evaluationType==s), '\n')
 tstIdx <- lrResults$prediction$evaluationType == 'Test'
+cvIdx <- lrResults$prediction$evaluationType == 'CV'
+trainIdx <- lrResults$prediction$evaluationType == 'Train'
 cat('Outcome proportion:       ', mean(lrResults$prediction[tstIdx, 'outcomeCount']), '\n')
 cat('Mean predicted proportion:', mean(lrResults$prediction[tstIdx, 'value']), '\n')  # predicted probability
 
@@ -127,31 +171,67 @@ resultsExternal <- externalValidateDbPlp(
   lrResults$model,
   validationDatabaseDetails = externalDatabaseDetailes)
 
-#### new
-if(!is.null(plpData)){
-  labels <- PatientLevelPrediction::createStudyPopulation(
-    plpData = plpData,
-    outcomeId = 3,
-    populationSettings = populationSettings
-  )
-}
+
+trainData <- transformPlpDataToDataFrame(plpData, populationSettings, outcomeId = 3)
 
 
-# convert to matrix
-
-dataObject <- PatientLevelPrediction::toSparseM(
-  plpData = plpData,
-  cohort = labels
+externalDatabaseDetails <- createDatabaseDetails(
+  connectionDetails = connectionDetails,
+  cdmDatabaseSchema = "main",
+  cdmDatabaseName = '',
+  cdmDatabaseId = '',  # ?
+  tempEmulationSchema = NULL,  # is this important to avoid further errors in getPlpData?
+  cohortDatabaseSchema = "main",
+  cohortTable = "cohort",
+  targetId = 2,
+  outcomeDatabaseSchema = "main",
+  outcomeTable = "cohort",
+  outcomeIds = 3,
+  cdmVersion = 5  #?
 )
 
-#sparse matrix: dataObject$dataMatrix
-#labels: dataObject$labels
+externalPlpData <- getPlpData(
+  databaseDetails = externalDatabaseDetails,
+  covariateSettings = covSettings,
+  restrictPlpDataSettings = restrictPlpDataSettings)
 
-columnDetails <- as.data.frame(dataObject$covariateRef)
+externalData <- transformPlpDataToDataFrame(externalPlpData, populationSettings, outcomeId = 3)
 
-cnames <- columnDetails$covariateName[order(columnDetails$columnId)]
 
-ipMat <- as.matrix(dataObject$dataMatrix)
-ipdata <- as.data.frame(ipMat)
-colnames(ipdata) <-  makeFriendlyNames(cnames)
-ipdata$outcome <- dataObject$labels$outcomeCount
+covariateImportance <- lrResults$model$covariateImportance
+importantCovariates <- covariateImportance[abs(covariateImportance['covariateValue']) > 0, ]
+estimationCovariates <- importantCovariates[['covariateName']]
+estimationCovariates <- makeFriendlyNames(estimationCovariates)
+
+dim(trainData[estimationCovariates])
+dim(externalData[estimationCovariates])
+
+ZInt <- computeTable1LikeTransformation(trainData[c(estimationCovariates, 'outcome')], outcomeBalance = T, outcomeCol = 'outcome')
+zext <- computeTable1LikeTransformation(externalData[c(estimationCovariates, 'outcome')], outcomeBalance = T, outcomeCol = 'outcome')
+
+muExt <- colMeans(zext)
+
+# TODO - check if we need to hand the outcome
+# TODO add a test to the package to make sure no: Error in rep(TRUE, n1) : invalid 'times' argument. check internalData
+# TODO check vector lengths
+
+divergence <- 'entropy'
+lambda <- 1e-2
+minW <- 1e-6
+optimizationMethod <- 'dual'
+
+evalIdx <- tstIdx | trainIdx
+prediction <- lrResults$prediction[evalIdx, ]
+prediction <- prediction[order(prediction$rowId), ]
+
+if (sum(prediction$outcomeCount != trainData[['outcome']]) > 0)  # TODO make if more rigorous using rowId
+  stop('need to allign prediction and trainData')
+
+internalData <- list(z=ZInt, p = prediction$value, y = trainData[['outcome']])
+estimatedResults <- estimateExternalPerformanceFromStats(
+  internalData, muExt, divergence = divergence, lambda = lambda, minW = minW, optimizationMethod = optimizationMethod,
+  nboot = 0)
+cat(glue('KL divergence between estimated weights and uniform ones = {format(estimatedResults$summary$kl, digits=3)}'),'\n')
+cat(glue('Estimated AUC = {format(estimatedResults$summary$AUC, digits=3)}'),'\n')
+
+
