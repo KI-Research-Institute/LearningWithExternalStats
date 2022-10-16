@@ -23,7 +23,7 @@ WeightedLogLike <- function(Y, p, w=NULL) {
   if (is.null(w))
     return(mean(llVec))
   else {
-    return((llVec %*% w)/sum(w))
+    return(as.numeric(llVec %*% w)/sum(w))
   }
 }
 
@@ -37,7 +37,7 @@ WeightedBrier <- function(Y, p, w=NULL) {
   if (is.null(w))
     return(mean(d))
   else
-    return((d %*% w)/sum(w))
+    return(as.numeric(d %*% w)/sum(w))
 }
 
 
@@ -45,7 +45,7 @@ meanPredictionRisk <- function(p, w=NULL) {
   if (is.null(w))
     return(mean(p))
   else
-    return((p %*% w)/sum(w))
+    return(as.numeric(p %*% w)/sum(w))
 }
 
 
@@ -57,5 +57,5 @@ meanObservedRisk <- function(Y, w=NULL) {
   if (is.null(w))
     return(mean(Y))
   else
-    return((Y %*% w)/sum(w))
+    return(as.numeric(Y %*% w)/sum(w))
 }

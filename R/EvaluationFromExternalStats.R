@@ -71,7 +71,7 @@ estimateExternalPerformanceFromStats <- function(
     dbRes[['n']] <- sum(widx)
     if (is.factor(y)) # TODO is this the right place
       y <- as.numeric(y)-1
-    dbRes[['n y']] <- t(widx) %*% y
+    dbRes[['n y']] <- as.numeric(t(widx) %*% y)
     # Post diagnostics
     postD <- postDiagnostics(w, z, mu)
     dbRes <- c(dbRes, postD)
@@ -189,11 +189,11 @@ postDiagnostics <- function(w, z, mu) {
   n <- length(w)
   p <- w/length(w)
   klIdx <- p>0
-  kl <- log(n) + t(p[klIdx]) %*% log(p[klIdx])
+  kl <- log(n) + as.numeric(t(p[klIdx]) %*% log(p[klIdx]))
   chi2ToUnif <- n*sum((p-1/n)**2)  #  = \sum(p-1/n)^2/1/n
   maxWeightedSMD <- 0 # TODO computeMaxSMD(mu, z, p)
 
-  diagnostics <- list(maxw=max(w), 'chi2-u' = chi2ToUnif, kl = kl, maxWeightedSMD=maxWeightedSMD)  # TODO add diagnostics
+  diagnostics <- list(maxw=max(w), 'chi2-u' = chi2ToUnif, kl = kl)  # TODO add diagnostics
   return(diagnostics)
 }
 
@@ -242,7 +242,8 @@ getPerformanceMeasures <- function(y, p, w=NULL) {
     warning(glue('Non binary outcome vector, number of classess = {nClasses}'))
     return(NULL)
   }
-  return(list(AUC=pAuc, LogLike=pLogLike, Brier=pBrier, observedR=pMeanObservedRisk, predictedR=pMeanPredictionRisk))
+  return(list(AUC=pAuc, LogLike=pLogLike, Brier=pBrier,
+              'Observed Risk'=pMeanObservedRisk, 'Predicted Risk'=pMeanPredictionRisk))
 }
 
 #' Estimate internal performance

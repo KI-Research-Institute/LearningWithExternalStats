@@ -206,11 +206,6 @@ estimatedResults <- estimateExternalPerformanceFromStats(  # TODO automatic sele
 summarizeResults(internalResults$performanceEvaluation$evaluationStatistics, 'Test')
 summarizeResults(externalResults[[2]]$performanceEvaluation$evaluationStatistics, 'Validation')
 
-kl <- format(estimatedResults$summary$kl, digits=3)
-cat(glue('KL divergence between estimated weights and uniform ones = {kl}'),'\n')
+cat('Estimated metrics:\n')
 # TODO change into a data-frame
-cat(glue('Estimated AUC   = {format(estimatedResults$summary$AUC, digits=3)}'),'\n')
-cat(glue('Estimated Brier = {format(estimatedResults$summary$Brier, digits=3)}'),'\n')
-cat(glue('Predicted Risk  = {format(estimatedResults$summary$predictedR, digits=3)}'),'\n')
-cat(glue('Observed  Risk  = {format(estimatedResults$summary$observedR, digits=3)}'),'\n')
-
+print(unstack(stack(estimatedResults$summary)), digits =3)
