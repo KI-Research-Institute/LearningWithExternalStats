@@ -1,0 +1,123 @@
+"covariateId","covariateName","analysisId","conceptId","covariateValue"
+4027663209,"condition_era group any time prior through -1 days relative to index: Peptic ulcer",209,4027663,1.62511930615698
+1728416409,"drug_era group any time prior through -1 days relative to index: Penicillin G",409,1728416,-0.230127607986184
+1112807409,"drug_era group any time prior through -1 days relative to index: Aspirin",409,1112807,-0.190501874090432
+4218389209,"condition_era group any time prior through -1 days relative to index: Whiplash injury to neck",209,4218389,0.162248313261431
+4156265209,"condition_era group any time prior through -1 days relative to index: Facial laceration",209,4156265,-0.124490407956144
+920293409,"drug_era group any time prior through -1 days relative to index: Nitrofurantoin",409,920293,0.0922252208594246
+1503184409,"drug_era group any time prior through -1 days relative to index: Mestranol",409,1503184,-0.0791259362772619
+1717327409,"drug_era group any time prior through -1 days relative to index: Ampicillin",409,1717327,-0.0679978683164768
+4285898209,"condition_era group any time prior through -1 days relative to index: Polyp of colon",209,4285898,-0.0572102570689724
+1125315410,"drug_era group during day -365 through -1 days relative to index: Acetaminophen",410,1125315,-0.0536170514788235
+81151209,"condition_era group any time prior through -1 days relative to index: Sprain of ankle",209,81151,-0.0386093129869889
+4294548209,"condition_era group any time prior through -1 days relative to index: Acute bacterial sinusitis",209,4294548,-0.0248916709835496
+4142905209,"condition_era group any time prior through -1 days relative to index: Fracture of rib",209,4142905,0.0116270803634262
+4285898210,"condition_era group during day -365 through -1 days relative to index: Polyp of colon",210,4285898,-4.35031240047903e-05
+4283893210,"condition_era group during day -365 through -1 days relative to index: Sinusitis",210,4283893,0
+260139210,"condition_era group during day -365 through -1 days relative to index: Acute bronchitis",210,260139,0
+40481087210,"condition_era group during day -365 through -1 days relative to index: Viral sinusitis",210,40481087,0
+30753210,"condition_era group during day -365 through -1 days relative to index: Esophagitis",210,30753,0
+4112343210,"condition_era group during day -365 through -1 days relative to index: Acute viral pharyngitis",210,4112343,0
+81893210,"condition_era group during day -365 through -1 days relative to index: Ulcerative colitis",210,81893,0
+40486433210,"condition_era group during day -365 through -1 days relative to index: Perennial allergic rhinitis",210,40486433,0
+80809210,"condition_era group during day -365 through -1 days relative to index: Rheumatoid arthritis",210,80809,0
+4048171210,"condition_era group during day -365 through -1 days relative to index: Perennial allergic rhinitis with seasonal variation",210,4048171,0
+4149245210,"condition_era group during day -365 through -1 days relative to index: Rupture of patellar tendon",210,4149245,0
+4084167210,"condition_era group during day -365 through -1 days relative to index: Acute allergic reaction",210,4084167,0
+8532001,"gender = FEMALE",1,8532,0
+9201923,"visit_occurrence concept count during day -365 through -1 concept_count relative to index: Inpatient Visit",923,0,0
+1002,"age in years",2,0,0
+1124957409,"drug_era group any time prior through -1 days relative to index: Oxycodone",409,1124957,0
+1125315409,"drug_era group any time prior through -1 days relative to index: Acetaminophen",409,1125315,0
+1729720409,"drug_era group any time prior through -1 days relative to index: Penicillin V",409,1729720,0
+1177480409,"drug_era group any time prior through -1 days relative to index: Ibuprofen",409,1177480,0
+1759842409,"drug_era group any time prior through -1 days relative to index: Clavulanate",409,1759842,0
+1713332409,"drug_era group any time prior through -1 days relative to index: Amoxicillin",409,1713332,0
+1768849409,"drug_era group any time prior through -1 days relative to index: Cefaclor",409,1768849,0
+933724409,"drug_era group any time prior through -1 days relative to index: Phenazopyridine",409,933724,0
+738818409,"drug_era group any time prior through -1 days relative to index: Doxylamine",409,738818,0
+1119510409,"drug_era group any time prior through -1 days relative to index: Dextromethorphan",409,1119510,0
+1102527409,"drug_era group any time prior through -1 days relative to index: Meperidine",409,1102527,0
+1192710409,"drug_era group any time prior through -1 days relative to index: Chlorpheniramine",409,1192710,0
+723013409,"drug_era group any time prior through -1 days relative to index: Diazepam",409,723013,0
+1115008409,"drug_era group any time prior through -1 days relative to index: Naproxen",409,1115008,0
+19127890409,"drug_era group any time prior through -1 days relative to index: Inert Ingredients",409,19127890,0
+1521369409,"drug_era group any time prior through -1 days relative to index: Norethindrone",409,1521369,0
+1738521409,"drug_era group any time prior through -1 days relative to index: Doxycycline",409,1738521,0
+1129625409,"drug_era group any time prior through -1 days relative to index: Diphenhydramine",409,1129625,0
+1149380409,"drug_era group any time prior through -1 days relative to index: fluticasone",409,1149380,0
+1154343409,"drug_era group any time prior through -1 days relative to index: Albuterol",409,1154343,0
+1515774409,"drug_era group any time prior through -1 days relative to index: norgestimate",409,1515774,0
+1549786409,"drug_era group any time prior through -1 days relative to index: Ethinyl Estradiol",409,1549786,0
+740275409,"drug_era group any time prior through -1 days relative to index: Carbamazepine",409,740275,0
+975125409,"drug_era group any time prior through -1 days relative to index: Hydrocortisone",409,975125,0
+1551099409,"drug_era group any time prior through -1 days relative to index: Prednisone",409,1551099,0
+1174888409,"drug_era group any time prior through -1 days relative to index: Hydrocodone",409,1174888,0
+705944409,"drug_era group any time prior through -1 days relative to index: Methylphenidate",409,705944,0
+1137529409,"drug_era group any time prior through -1 days relative to index: salmeterol",409,1137529,0
+1322184409,"drug_era group any time prior through -1 days relative to index: clopidogrel",409,1322184,0
+1332418409,"drug_era group any time prior through -1 days relative to index: Amlodipine",409,1332418,0
+1361711409,"drug_era group any time prior through -1 days relative to index: Nitroglycerin",409,1361711,0
+1539403409,"drug_era group any time prior through -1 days relative to index: Simvastatin",409,1539403,0
+1589505409,"drug_era group any time prior through -1 days relative to index: Levonorgestrel",409,1589505,0
+1778162409,"drug_era group any time prior through -1 days relative to index: Cefuroxime",409,1778162,0
+1500211409,"drug_era group any time prior through -1 days relative to index: Medroxyprogesterone",409,1500211,0
+1595799409,"drug_era group any time prior through -1 days relative to index: Ferrous fumarate",409,1595799,0
+1309944409,"drug_era group any time prior through -1 days relative to index: Amiodarone",409,1309944,0
+1343916409,"drug_era group any time prior through -1 days relative to index: Epinephrine",409,1343916,0
+914335409,"drug_era group any time prior through -1 days relative to index: Atropine",409,914335,0
+1305058409,"drug_era group any time prior through -1 days relative to index: Methotrexate",409,1305058,0
+1759842410,"drug_era group during day -365 through -1 days relative to index: Clavulanate",410,1759842,0
+1713332410,"drug_era group during day -365 through -1 days relative to index: Amoxicillin",410,1713332,0
+1115008410,"drug_era group during day -365 through -1 days relative to index: Naproxen",410,1115008,0
+1177480410,"drug_era group during day -365 through -1 days relative to index: Ibuprofen",410,1177480,0
+738818410,"drug_era group during day -365 through -1 days relative to index: Doxylamine",410,738818,0
+1119510410,"drug_era group during day -365 through -1 days relative to index: Dextromethorphan",410,1119510,0
+1305058410,"drug_era group during day -365 through -1 days relative to index: Methotrexate",410,1305058,0
+1551099410,"drug_era group during day -365 through -1 days relative to index: Prednisone",410,1551099,0
+1521369410,"drug_era group during day -365 through -1 days relative to index: Norethindrone",410,1521369,0
+4296205209,"condition_era group any time prior through -1 days relative to index: Second degree burn",209,4296205,0
+4278672209,"condition_era group any time prior through -1 days relative to index: Fracture of forearm",209,4278672,0
+4283893209,"condition_era group any time prior through -1 days relative to index: Sinusitis",209,4283893,0
+260139209,"condition_era group any time prior through -1 days relative to index: Acute bronchitis",209,260139,0
+40481087209,"condition_era group any time prior through -1 days relative to index: Viral sinusitis",209,40481087,0
+372328209,"condition_era group any time prior through -1 days relative to index: Otitis media",209,372328,0
+28060209,"condition_era group any time prior through -1 days relative to index: Streptococcal sore throat",209,28060,0
+4112343209,"condition_era group any time prior through -1 days relative to index: Acute viral pharyngitis",209,4112343,0
+81893209,"condition_era group any time prior through -1 days relative to index: Ulcerative colitis",209,81893,0
+4109685209,"condition_era group any time prior through -1 days relative to index: Laceration of foot",209,4109685,0
+4237458209,"condition_era group any time prior through -1 days relative to index: Fracture of clavicle",209,4237458,0
+195588209,"condition_era group any time prior through -1 days relative to index: Cystitis",209,195588,0
+378001209,"condition_era group any time prior through -1 days relative to index: Concussion with no loss of consciousness",209,378001,0
+4001336209,"condition_era group any time prior through -1 days relative to index: Concussion injury of brain",209,4001336,0
+4132546209,"condition_era group any time prior through -1 days relative to index: Traumatic brain injury",209,4132546,0
+4059173209,"condition_era group any time prior through -1 days relative to index: Fracture of ankle",209,4059173,0
+40486433209,"condition_era group any time prior through -1 days relative to index: Perennial allergic rhinitis",209,40486433,0
+4048171209,"condition_era group any time prior through -1 days relative to index: Perennial allergic rhinitis with seasonal variation",209,4048171,0
+257012209,"condition_era group any time prior through -1 days relative to index: Chronic sinusitis",209,257012,0
+4152936209,"condition_era group any time prior through -1 days relative to index: Laceration of thigh",209,4152936,0
+4029498209,"condition_era group any time prior through -1 days relative to index: Seizure disorder",209,4029498,0
+78272209,"condition_era group any time prior through -1 days relative to index: Sprain of wrist",209,78272,0
+4113008209,"condition_era group any time prior through -1 days relative to index: Laceration of hand",209,4113008,0
+4051466209,"condition_era group any time prior through -1 days relative to index: Childhood asthma",209,4051466,0
+317009209,"condition_era group any time prior through -1 days relative to index: Asthma",209,317009,0
+4116491209,"condition_era group any time prior through -1 days relative to index: Escherichia coli urinary tract infection",209,4116491,0
+4310024209,"condition_era group any time prior through -1 days relative to index: Angiodysplasia of stomach",209,4310024,0
+440086209,"condition_era group any time prior through -1 days relative to index: Child attention deficit disorder",209,440086,0
+4134304209,"condition_era group any time prior through -1 days relative to index: Fracture subluxation of wrist",209,4134304,0
+4230399209,"condition_era group any time prior through -1 days relative to index: Closed fracture of hip",209,4230399,0
+4155034209,"condition_era group any time prior through -1 days relative to index: Laceration of forearm",209,4155034,0
+4296204209,"condition_era group any time prior through -1 days relative to index: First degree burn",209,4296204,0
+30753209,"condition_era group any time prior through -1 days relative to index: Esophagitis",209,30753,0
+133834209,"condition_era group any time prior through -1 days relative to index: Atopic dermatitis",209,133834,0
+4084167209,"condition_era group any time prior through -1 days relative to index: Acute allergic reaction",209,4084167,0
+375671209,"condition_era group any time prior through -1 days relative to index: Concussion with loss of consciousness",209,375671,0
+134438209,"condition_era group any time prior through -1 days relative to index: Contact dermatitis",209,134438,0
+440448209,"condition_era group any time prior through -1 days relative to index: Appendicitis",209,440448,0
+261325209,"condition_era group any time prior through -1 days relative to index: Pulmonary emphysema",209,261325,0
+4035415209,"condition_era group any time prior through -1 days relative to index: Tear of meniscus of knee",209,4035415,0
+439777209,"condition_era group any time prior through -1 days relative to index: Anemia",209,439777,0
+317576209,"condition_era group any time prior through -1 days relative to index: Coronary arteriosclerosis",209,317576,0
+4149245209,"condition_era group any time prior through -1 days relative to index: Rupture of patellar tendon",209,4149245,0
+321042209,"condition_era group any time prior through -1 days relative to index: Cardiac arrest",209,321042,0
+380378209,"condition_era group any time prior through -1 days relative to index: Epilepsy",209,380378,0

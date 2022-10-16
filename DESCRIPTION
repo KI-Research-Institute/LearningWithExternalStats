@@ -19,5 +19,14 @@ Imports:
 Suggests:
 	knitr,
     rmarkdown,
-	glmnet
+	glmnet,
+	Matrix,
+	Rmpfr,
+	dbplyr,
+	Eunomia,
+	FeatureExtraction,
+	PatientLevelPrediction
 VignetteBuilder: knitr
+Depends: 
+    R (>= 2.10)
+LazyData: true

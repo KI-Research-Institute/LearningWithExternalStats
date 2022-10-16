@@ -36,11 +36,8 @@ library(glmnet)
 Next we load data and model objects:
 
 ```{r}
-load(file=system.file('data/internalTrain.RData', package = "LearningWithExternalStats"))
-load(file=system.file('data/internalTest.RData', package = "LearningWithExternalStats"))
-load(file=system.file('data/external.RData', package = "LearningWithExternalStats"))  # External data
-load(file=file.path(system.file('data', package = "LearningWithExternalStats"), 'model1.RData')) # model
-ls()
+d <- LearningWithExternalStats::anchorData1
+model1 <- LearningWithExternalStats::anchorLR1
 ```
 
 ## Prediction in internal dataset
@@ -48,9 +45,9 @@ ls()
 Predict the label probabilities in the internal test set
 
 ```{r}
-xFeatures <- colnames(dExt)[1:(ncol(dExt)-1)]
-pInternal <- predict(model1, sapply(dIntTest[xFeatures], as.numeric), type = "response", s = "lambda.1se")[,1]
-internalResults <- estimateInternalPerformance(dIntTest[['Y']], pInternal, 2)  # TODO change nboot
+xFeatures <- colnames(d$externalTest)[1:(ncol(d$externalTest)-1)]
+pInternal <- predict(model1, sapply(d$internalTest[xFeatures], as.numeric), type = "response", s = "lambda.1se")[,1]
+internalResults <- estimateInternalPerformance(d$internalTest[['Y']], pInternal, 2)  # TODO change nboot
 cat(glue('\nInternal AUC = {format(internalResults$AUC, digits=3)}'), '\n')
 ```
 
@@ -64,8 +61,8 @@ external set are averaged. The re-weighting algorithm will use the means
 of the external features and the entire internal features matrix.
 
 ```{r}
-dBalanceInt <- computeTable1LikeTransformation(dIntTest, outcomeBalance=TRUE)
-dBalanceExt <- computeTable1LikeTransformation(dExt, outcomeBalance=TRUE)
+dBalanceInt <- computeTable1LikeTransformation(d$internalTest, outcomeBalance=TRUE)
+dBalanceExt <- computeTable1LikeTransformation(d$externalTest, outcomeBalance=TRUE)
 muExt <- colMeans(dBalanceExt)
 ```
 
@@ -86,7 +83,7 @@ optimizationMethod <- 'dual'
 Now we are ready to estimate:
 
 ```{r}
-internalData <- list(z=dBalanceInt, p = pInternal, y = dIntTest[['Y']])
+internalData <- list(z=dBalanceInt, p = pInternal, y = d$internalTest[['Y']])
 estimatedResults <- estimateExternalPerformanceFromStats(
   internalData, muExt, divergence = divergence, lambda = lambda, minW = minW, optimizationMethod = optimizationMethod, 
   nboot = 0)
@@ -102,7 +99,7 @@ reweighted distributions.
 Compare to real performance in the test set
 
 ```{r}
-pExternal <- predict(model1, sapply(dExt[xFeatures], as.numeric), type = "response", s = "lambda.1se")[,1]
-extAuc <- auc(roc(dExt[['Y']], pExternal, quiet = TRUE, direction='<'))
+pExternal <- predict(model1, sapply(d$externalTest[xFeatures], as.numeric), type = "response", s = "lambda.1se")[,1]
+extAuc <- auc(roc(d$externalTest[['Y']], pExternal, quiet = TRUE, direction='<'))
 cat(glue('\nExternal AUC = {format(extAuc, digits=3)}'), '\n')
 ```

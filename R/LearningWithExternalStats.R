@@ -22,17 +22,3 @@
 #' @name LearningWithExternalStats
 #' @import ParallelLogger
 NULL
-
-#' Internal train
-#' @docType data
-#' @keywords datasets
-#' @name dIntTrain
-#' @format A data frame containing the following elements:
-#' \describe{
-#'   \item{X1, ... , X10}{features}
-#'   \item{Y}{outcome}
-#' }
-#' @usage
-#' load(file=system.file('data/internalTrain.RData', package = "LearningWithExternalStats"))
-#' TODO change this
-NULL
