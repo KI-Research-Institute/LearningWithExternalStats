@@ -28,7 +28,6 @@ First we import the libraries
 ```{r setup}
 library(LearningWithExternalStats)
 library(glue)
-library(WeightedROC)
 library(pROC)
 library(glmnet)
 ```
