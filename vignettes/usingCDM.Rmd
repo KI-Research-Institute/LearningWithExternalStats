@@ -1,0 +1,158 @@
+---
+title: "Using external evaluation with CDM"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Using external evaluation with CDM}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+```{r setup}
+library(LearningWithExternalStats)
+library(Eunomia)  # v1.0.2
+library(FeatureExtraction)  # v3.2.0
+library(PatientLevelPrediction)  # v6.0.4
+library(glue)
+```
+
+Definitions
+
+```{r}
+# Definitions
+outcomeId <- 3
+internalTargetId <- 1
+externalTargetId <- 2
+
+# _____________________________________________________________________________________________________________________
+#
+# Activate Eunomia demo database
+#
+connectionDetails <- Eunomia::getEunomiaConnectionDetails()
+Eunomia::createCohorts(connectionDetails)
+
+# _____________________________________________________________________________________________________________________
+#
+# Study setup
+#
+covSettings <- createCovariateSettings(
+  useDemographicsGender = TRUE,
+  useDemographicsAge = TRUE,
+  useConditionGroupEraLongTerm = TRUE,
+  useConditionGroupEraAnyTimePrior = TRUE,
+  useDrugGroupEraLongTerm = TRUE,
+  useDrugGroupEraAnyTimePrior = TRUE,
+  useVisitConceptCountLongTerm = TRUE,
+  longTermStartDays = -365,
+  endDays = -1)
+
+databaseDetails <- createDatabaseDetails(
+  connectionDetails = connectionDetails,
+  cdmDatabaseSchema = "main",
+  cdmDatabaseName = '',
+  cdmDatabaseId = '',  # ?
+  tempEmulationSchema = NULL,  # is this important to avoid further errors in getPlpData?
+  cohortDatabaseSchema = "main",
+  cohortTable = "cohort",
+  targetId = internalTargetId,
+  outcomeDatabaseSchema = "main",
+  outcomeTable = "cohort",
+  outcomeIds = outcomeId,
+  cdmVersion = 5  #?
+)
+
+restrictPlpDataSettings <- createRestrictPlpDataSettings()  # sampleSize = 1000
+```
+
+# Internal node
+Generate internal data
+```{r}
+internalPlpData <- getPlpData(
+    databaseDetails = databaseDetails,
+    covariateSettings = covSettings,
+    restrictPlpDataSettings = restrictPlpDataSettings)
+summary(internalPlpData)
+```
+
+Prediction model definitions
+
+```{r}
+
+populationSettings <- createStudyPopulationSettings(
+  washoutPeriod = 364,
+  firstExposureOnly = FALSE,
+  removeSubjectsWithPriorOutcome = TRUE,
+  priorOutcomeLookback = 9999,
+  riskWindowStart = 1,
+  riskWindowEnd = 365,
+  minTimeAtRisk = 364,
+  requireTimeAtRisk = TRUE,
+  includeAllOutcomes = TRUE)
+
+splitSettings <- createDefaultSplitSetting(
+  trainFraction = 0.75,
+  testFraction = 0.25,
+  type = 'stratified',
+  nfold = 2,
+  splitSeed = 1234
+)
+
+sampleSettings <- createSampleSettings()
+featureEngineeringSettings <- createFeatureEngineeringSettings()
+preprocessSettings <- createPreprocessSettings(
+  minFraction = 0.01,
+  normalize = T,
+  removeRedundancy = T
+)
+
+
+lrModel <- setLassoLogisticRegression()
+
+executeSettings = createExecuteSettings(
+  runSplitData = T,
+  runSampleData = T,
+  runfeatureEngineering = T,
+  runPreprocessData = T,
+  runModelDevelopment = T,
+  runCovariateSummary = T
+)
+
+```
+
+Train the model
+
+```{r}
+
+internalResults <- runPlp(
+    plpData = internalPlpData,
+    outcomeId = outcomeId,
+    analysisId = '../singleDemo',  # TODO
+    analysisName = 'Demonstration of runPlp for training single PLP models',
+    populationSettings = populationSettings,
+    splitSettings = splitSettings,
+    sampleSettings = sampleSettings,
+    featureEngineeringSettings = featureEngineeringSettings,
+    preprocessSettings = preprocessSettings,
+    modelSettings = lrModel,
+    logSettings = createLogSettings(),
+    executeSettings = executeSettings,
+    saveDirectory = file.path(getwd(), '..', 'singlePlp') # TODO
+  )
+
+# summarizeResults(internalResults$performanceEvaluation$evaluationStatistics, 'Test')
+```
+
+Identify model covariates. These will be used in the estimation algorithm.
+```{r}
+covariateImportance <- internalResults$model$covariateImportance
+importantCovariates <- covariateImportance[abs(covariateImportance['covariateValue']) > 0, ]
+estimationCovariates <- importantCovariates[['covariateName']]
+# estimationCovariates <- makeFriendlyNames(estimationCovariates)
+
+```

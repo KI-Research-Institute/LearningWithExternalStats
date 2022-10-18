@@ -196,7 +196,7 @@ ZInt <- computeTable1LikeTransformation(
 
 internalData <- list(z=ZInt, p = prediction$value, y = internalXY[['outcome']])
 estimatedResults <- estimateExternalPerformanceFromStats(  # TODO automatic selection of parameters?
-  internalData, muExt, divergence = 'entropy', lambda = 1e-2, minW = 1e-6, optimizationMethod = 'dual', nboot = 0)
+  internalData, muExt, divergence = 'entropy', lambda = 1e-2, minW = 1e-6, optimizationMethod = 'dual', nboot = 10)
 
 # _____________________________________________________________________________________________________________________
 #

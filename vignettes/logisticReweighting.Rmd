@@ -60,9 +60,9 @@ external set are averaged. The re-weighting algorithm will use the means
 of the external features and the entire internal features matrix.
 
 ```{r}
-dBalanceInt <- computeTable1LikeTransformation(d$internalTest, outcomeBalance=TRUE)
-dBalanceExt <- computeTable1LikeTransformation(d$externalTest, outcomeBalance=TRUE)
-muExt <- colMeans(dBalanceExt)
+dTransformedInt <- computeTable1LikeTransformation(d$internalTest, outcomeBalance=TRUE)
+dTransformedExt <- computeTable1LikeTransformation(d$externalTest, outcomeBalance=TRUE)
+muExt <- colMeans(dTransformedExt)
 ```
 
 Before we re-weight, we should define parameters of the algorithms. The
@@ -82,7 +82,7 @@ optimizationMethod <- 'dual'
 Now we are ready to estimate:
 
 ```{r}
-internalData <- list(z=dBalanceInt, p = pInternal, y = d$internalTest[['Y']])
+internalData <- list(z=dTransformedInt, p = pInternal, y = d$internalTest[['Y']])
 estimatedResults <- estimateExternalPerformanceFromStats(
   internalData, muExt, divergence = divergence, lambda = lambda, minW = minW,
   optimizationMethod = optimizationMethod, nboot = 0)

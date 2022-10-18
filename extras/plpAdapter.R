@@ -22,6 +22,7 @@ transformPlpDataToDataFrame <- function(plpData, populationSettings, outcomeId) 
   ipdata <- as.data.frame(ipMat)
   colnames(ipdata) <-  makeFriendlyNames(cnames)
   ipdata$outcome <- dataObject$labels$outcomeCount
+  rownames(ipdata) <- dataObject$labels$rowId
   return(ipdata)
 
 }

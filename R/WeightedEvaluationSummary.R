@@ -37,7 +37,7 @@ WeightedBrier <- function(Y, p, w=NULL) {
   if (is.null(w))
     return(mean(d))
   else
-    return(as.numeric(d %*% w)/sum(w))
+    return(as.numeric(d %*% w)/sum(w))  # as.numeric turns a 1X1 matrix to a scalar
 }
 
 
