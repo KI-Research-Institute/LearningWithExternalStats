@@ -84,8 +84,12 @@ Now we are ready to estimate:
 ```{r}
 internalData <- list(z=dBalanceInt, p = pInternal, y = d$internalTest[['Y']])
 estimatedResults <- estimateExternalPerformanceFromStats(
-  internalData, muExt, divergence = divergence, lambda = lambda, minW = minW, optimizationMethod = optimizationMethod, 
-  nboot = 0)
+  internalData, muExt, divergence = divergence, lambda = lambda, minW = minW,
+  optimizationMethod = optimizationMethod, nboot = 0)
+
+# cat('Estimated metrics:\n')
+#print(unstack(stack(estimatedResults$summary)), digits =3)
+
 cat(glue('KL divergence between estimated weights and uniform ones = {format(estimatedResults$summary$kl, digits=3)}'),'\n')
 cat(glue('Estimated AUC = {format(estimatedResults$summary$AUC, digits=3)}'),'\n')
 ```
@@ -101,4 +105,10 @@ Compare to real performance in the test set
 pExternal <- predict(model1, sapply(d$externalTest[xFeatures], as.numeric), type = "response", s = "lambda.1se")[,1]
 extAuc <- auc(roc(d$externalTest[['Y']], pExternal, quiet = TRUE, direction='<'))
 cat(glue('\nExternal AUC = {format(extAuc, digits=3)}'), '\n')
+```
+
+A more detailed view of estimation results:
+
+```{r}
+print(estimationSummaryToDF(estimatedResults$summary))
 ```

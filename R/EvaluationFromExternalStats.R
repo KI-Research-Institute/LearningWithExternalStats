@@ -101,6 +101,22 @@ estimateExternalPerformanceFromStats <- function(
     return(list(summary=NULL, preDiagnosis=preD))
 }
 
+#' Convert estimation summary to a data frame
+#'
+#' @description Convert estimation summary to a data frame
+#'
+#' @param estimationSummary a named list of estimation summary
+#'
+#' @return a data frame
+#'
+#' @export
+estimationSummaryToDF <-function(estimationSummary) {
+  df <- data.frame(
+    metric=names(estimationSummary),
+    value=formatC(as.numeric(estimationSummary), format = 'fg', digits = 3)
+  )
+  return(df)
+}
 
 
 #' Pre re-weighting diagnostics
@@ -191,9 +207,9 @@ postDiagnostics <- function(w, z, mu) {
   klIdx <- p>0
   kl <- log(n) + as.numeric(t(p[klIdx]) %*% log(p[klIdx]))
   chi2ToUnif <- n*sum((p-1/n)**2)  #  = \sum(p-1/n)^2/1/n
-  maxWeightedSMD <- 0 # TODO computeMaxSMD(mu, z, p)
+  maxWeightedSMD <- computeMaxSMD(mu, z, p)
 
-  diagnostics <- list(maxw=max(w), 'chi2-u' = chi2ToUnif, kl = kl)  # TODO add diagnostics
+  diagnostics <- list(maxw=max(w), 'chi2-u' = chi2ToUnif, kl = kl, maxWeightedSMD = maxWeightedSMD)  # TODO add diagnostics
   return(diagnostics)
 }
 

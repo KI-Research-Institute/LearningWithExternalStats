@@ -208,4 +208,4 @@ summarizeResults(externalResults[[2]]$performanceEvaluation$evaluationStatistics
 
 cat('Estimated metrics:\n')
 # TODO change into a data-frame
-print(unstack(stack(estimatedResults$summary)), digits =3)
+print(estimationSummaryToDF(estimatedResults$summary))
