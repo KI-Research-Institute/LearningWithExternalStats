@@ -5,5 +5,6 @@
 \alias{LearningWithExternalStats}
 \title{LearningWithExternalStats}
 \description{
-A package for running predictions using data in the OMOP CDM
+A package for augmenting learning by utilizing external summary statistics in addition to internal
+detailed data
 }

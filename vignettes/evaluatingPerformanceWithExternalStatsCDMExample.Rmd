@@ -1,0 +1,235 @@
+---
+title: "Evaluating Performance Using External Statistics with CDM"
+output:
+  pdf_document:
+    number_sections: yes
+    toc: yes
+  html_document:
+    number_sections: yes
+    toc: yes
+vignette: >
+  %\VignetteIndexEntry{Using external evaluation with CDM}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+\newpage
+# Setup
+
+Setup and data definitions
+```{r setup, message=FALSE, warning=FALSE, eval=TRUE, results='hide'}
+library(Eunomia)  # v1.0.2
+library(FeatureExtraction)  # v3.2.0
+library(PatientLevelPrediction)  # v6.0.4
+library(glue)
+library(plpDataAdapter)
+library(LearningWithExternalStats)
+
+# Activate Eunomia demo database
+connectionDetails <- Eunomia::getEunomiaConnectionDetails()
+Eunomia::createCohorts(connectionDetails)
+
+# Data definitions
+outcomeId <- 3
+internalTargetId <- 1
+externalTargetId <- 2
+
+covSettings <- createCovariateSettings(
+  useDemographicsGender = TRUE,
+  useDemographicsAge = TRUE,
+  useConditionGroupEraLongTerm = TRUE,
+  useConditionGroupEraAnyTimePrior = TRUE,
+  useDrugGroupEraLongTerm = TRUE,
+  useDrugGroupEraAnyTimePrior = TRUE,
+  useVisitConceptCountLongTerm = TRUE,
+  longTermStartDays = -365,
+  endDays = -1)
+
+databaseDetails <- createDatabaseDetails(
+  connectionDetails = connectionDetails,
+  cdmDatabaseSchema = "main",
+  cdmDatabaseName = '',
+  cdmDatabaseId = '',  # ?
+  tempEmulationSchema = NULL,  # is this important to avoid further errors in getPlpData?
+  cohortDatabaseSchema = "main",
+  cohortTable = "cohort",
+  targetId = internalTargetId,
+  outcomeDatabaseSchema = "main",
+  outcomeTable = "cohort",
+  outcomeIds = outcomeId,
+  cdmVersion = 5  #?
+)
+
+restrictPlpDataSettings <- createRestrictPlpDataSettings()  # sampleSize = 1000
+```
+\newpage
+
+# Internal node
+We begin by defining prediction model settings:
+```{r modelSettings, message=FALSE, warning=FALSE, eval=TRUE}
+populationSettings <- createStudyPopulationSettings(
+  washoutPeriod = 364,
+  firstExposureOnly = FALSE,
+  removeSubjectsWithPriorOutcome = TRUE,
+  priorOutcomeLookback = 9999,
+  riskWindowStart = 1,
+  riskWindowEnd = 365,
+  minTimeAtRisk = 364,
+  requireTimeAtRisk = TRUE,
+  includeAllOutcomes = TRUE)
+
+splitSettings <- createDefaultSplitSetting(
+  trainFraction = 0.75,
+  testFraction = 0.25,
+  type = 'stratified',
+  nfold = 2,
+  splitSeed = 1234
+)
+
+sampleSettings <- createSampleSettings()
+featureEngineeringSettings <- createFeatureEngineeringSettings()
+preprocessSettings <- createPreprocessSettings(
+  minFraction = 0.01,
+  normalize = T,
+  removeRedundancy = T
+)
+
+
+lrModel <- setLassoLogisticRegression()
+
+executeSettings = createExecuteSettings(
+  runSplitData = T,
+  runSampleData = T,
+  runfeatureEngineering = T,
+  runPreprocessData = T,
+  runModelDevelopment = T,
+  runCovariateSummary = T
+)
+
+```
+Next we generate the internal data:
+```{r generateInternal, message=FALSE, warning=FALSE, eval=TRUE, results='hide'}
+internalPlpData <- getPlpData(
+    databaseDetails = databaseDetails,
+    covariateSettings = covSettings,
+    restrictPlpDataSettings = restrictPlpDataSettings)
+```
+\newpage
+We train the model and extract its active covariates:
+```{r message=FALSE, warning=FALSE, eval=TRUE, results='hide'}
+internalResults <- runPlp(
+    plpData = internalPlpData,
+    outcomeId = outcomeId,
+    analysisId = '../singleDemo',
+    analysisName = 'Demonstration of model training in internal node',
+    populationSettings = populationSettings,
+    splitSettings = splitSettings,
+    sampleSettings = sampleSettings,
+    featureEngineeringSettings = featureEngineeringSettings,
+    preprocessSettings = preprocessSettings,
+    modelSettings = lrModel,
+    logSettings = createLogSettings(),
+    executeSettings = executeSettings,
+    saveDirectory = file.path(getwd(), '..', 'singlePlp')
+  )
+# Identify model covariates. These will be used in the estimation algorithm.
+estimationCovariates <- getLRModelCovariates(internalResults)
+```
+Preliminary experiments have shown that using the subset selected by the model for generation of external statistics
+gives better results than using all covariates.
+```{r show results}
+cat(glue('Selected {length(estimationCovariates)} features'), '\n')
+```
+The external node should receive now the estimation covariates.
+\newpage
+
+# External node
+The external nodes generate PLP data and prepares statistics for sharing with the internal one. For the sake of 
+algorithm evaluation it also evaluate the model trained on the internal node.
+
+## Generate PLP data and evaluate model
+```{r message=FALSE, warning=FALSE, eval=TRUE, results='hide'}
+externalDatabaseDetails <- createDatabaseDetails(
+  connectionDetails = connectionDetails,
+  cdmDatabaseSchema = "main",
+  cdmDatabaseName = '',
+  cdmDatabaseId = '',  # ?
+  tempEmulationSchema = NULL,  # is this important to avoid further errors in getPlpData?
+  cohortDatabaseSchema = "main",
+  cohortTable = "cohort",
+  targetId = externalTargetId,
+  outcomeDatabaseSchema = "main",
+  outcomeTable = "cohort",
+  outcomeIds = outcomeId,
+  cdmVersion = 5  #?
+)
+
+externalPlpData <- getPlpData(
+  databaseDetails = externalDatabaseDetails,
+  covariateSettings = covSettings,
+  restrictPlpDataSettings = restrictPlpDataSettings)
+
+externalResults <- externalValidateDbPlp(  # TODO avoid duplicated generation of plpData?
+  internalResults$model,
+  validationDatabaseDetails = externalDatabaseDetails)
+```
+
+## Prepare statistics for sharing
+
+```{r message=FALSE, warning=FALSE, eval=TRUE, results='hide'}
+externalXY <- transformPlpDataToDataFrame(
+  externalPlpData, populationSettings, outcomeId = outcomeId)
+
+ZExt <- computeTable1LikeTransformation(
+  externalXY[c(estimationCovariates, 'outcome')], 
+  outcomeBalance = T, 
+  outcomeCol = 'outcome'
+)
+
+muExt <- colMeans(ZExt)
+```
+\newpage
+
+# Internal node: evaluation of external dataset peformence using internal dataset
+
+```{r message=FALSE, warning=FALSE, eval=TRUE, results='hide'}
+# Transform internal plp data and align it with predictions
+internalXY <- transformPlpDataToDataFrame(
+  internalPlpData, populationSettings, outcomeId = outcomeId)
+
+allignedInternal <- allignDataAndPrediction(
+  internalXY, internalResults, subsets = 'Train')
+
+# Compute transformation on covariate outcome pairs
+ZInt <- computeTable1LikeTransformation(
+  allignedInternal$dataXY[c(estimationCovariates, 'outcome')], 
+  outcomeBalance = T, 
+  outcomeCol = 'outcome'
+)
+
+# Estimate external performance
+internalData <- list(
+  z=ZInt, 
+  p = allignedInternal$prediction$value, 
+  y = allignedInternal$dataXY[['outcome']]
+)
+
+estimatedResults <- estimateExternalPerformanceFromStats(
+  internalData, 
+  muExt, 
+  divergence = 'entropy', lambda = 1e-2, minW = 1e-6, optimizationMethod = 'dual', 
+  nboot = 10
+)
+```
+
+# Compare evaluation and real results
+
+```{r message=FALSE, warning=FALSE, eval=TRUE}
+summarizeResults(
+  internalResults$performanceEvaluation$evaluationStatistics, 'Test')
+
+summarizeResults(
+  externalResults[[2]]$performanceEvaluation$evaluationStatistics, 'Validation')
+
+print(estimationSummaryToDF(estimatedResults$summary))
+```

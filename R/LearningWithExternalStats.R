@@ -1,6 +1,6 @@
 # @file LearningWithExternalStats.R
 #
-# This file is part of LearningWithExternalStats.R
+# This file is part of LearningWithExternalStats
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -16,7 +16,8 @@
 
 #' LearningWithExternalStats
 #'
-#' @description A package for running predictions using data in the OMOP CDM
+#' @description A package for augmenting learning by utilizing external summary statistics in addition to internal
+#' detailed data
 #'
 #' @docType package
 #' @name LearningWithExternalStats
