@@ -15,7 +15,9 @@ vignette: >
 
 # Setup in internal and external nodes
 
-```{r setup, , tidy=FALSE,eval=FALSE}
+## Definitions
+
+```{r setup}
 library(LearningWithExternalStats)
 library(Eunomia)  # v1.0.2
 library(FeatureExtraction)  # v3.2.0
@@ -29,7 +31,7 @@ Eunomia::createCohorts(connectionDetails)
 
 Data definitions
 
-```{r, tidy=FALSE,eval=FALSE}
+```{r}
 outcomeId <- 3
 internalTargetId <- 1
 externalTargetId <- 2
@@ -63,11 +65,75 @@ databaseDetails <- createDatabaseDetails(
 restrictPlpDataSettings <- createRestrictPlpDataSettings()  # sampleSize = 1000
 ```
 
+## Utilities
+
+```{r}
+transformPlpDataToDataFrame <- function(plpData, populationSettings, outcomeId) {
+  #### new
+  if(!is.null(plpData)){
+    labels <- PatientLevelPrediction::createStudyPopulation(
+      plpData = plpData,
+      outcomeId = outcomeId,
+      populationSettings = populationSettings
+    )
+  }
+  # convert to matrix
+  dataObject <- PatientLevelPrediction::toSparseM(
+    plpData = plpData,
+    cohort = labels
+  )
+  #sparse matrix: dataObject$dataMatrix
+  #labels: dataObject$labels
+  columnDetails <- as.data.frame(dataObject$covariateRef)
+
+  cnames <- columnDetails$covariateName[order(columnDetails$columnId)]
+
+  ipMat <- as.matrix(dataObject$dataMatrix)
+  ipdata <- as.data.frame(ipMat)
+  colnames(ipdata) <-  makeFriendlyNames(cnames)
+  ipdata$outcome <- dataObject$labels$outcomeCount
+  rownames(ipdata) <- dataObject$labels$rowId
+  return(ipdata)
+
+}
+
+makeFriendlyNames <- function(columnNames){
+
+  columnNames <- gsub("[[:punct:]]", " ", columnNames)
+  columnNames <- gsub(" ", "_", columnNames)
+  return(columnNames)
+
+}
+
+
+summarizeResults <- function(s, evaluation) {
+
+  cat(evaluation, 'AUROC:\t', s[(s['metric']=='AUROC') & (s['evaluation']==evaluation), 'value'][[1]], '\n')
+  f <- c(
+    'populationSize',
+    'outcomeCount',
+    'AUROC',
+    '95% lower AUROC',
+    '95% upper AUROC',
+    # AUPRC
+    'brier score',
+    # brier score scaled
+    # Eavg
+    # E90
+    # Emax
+    'calibrationInLarge mean prediction',
+    'calibrationInLarge observed risk'
+  )
+  print(format(s[(s['evaluation']==evaluation) & (s[['metric']] %in% f),c('metric', 'value')], digits=2))
+
+}
+```
+
 # Internal node
 
 Generate internal data
 
-```{r, tidy=FALSE,eval=FALSE}
+```{r}
 internalPlpData <- getPlpData(
     databaseDetails = databaseDetails,
     covariateSettings = covSettings,
@@ -76,7 +142,7 @@ internalPlpData <- getPlpData(
 
 Prediction model definitions
 
-```{r, tidy=FALSE,eval=FALSE}
+```{r}
 
 populationSettings <- createStudyPopulationSettings(
   washoutPeriod = 364,
@@ -121,12 +187,12 @@ executeSettings = createExecuteSettings(
 
 Train the model
 
-```{r, tidy=FALSE,eval=FALSE}
+```{r}
 
 internalResults <- runPlp(
     plpData = internalPlpData,
     outcomeId = outcomeId,
-    analysisId = '../singleDemo',  # TODO
+    analysisId = '../singleDemo',
     analysisName = 'Demonstration of runPlp for training single PLP models',
     populationSettings = populationSettings,
     splitSettings = splitSettings,
@@ -136,7 +202,7 @@ internalResults <- runPlp(
     modelSettings = lrModel,
     logSettings = createLogSettings(),
     executeSettings = executeSettings,
-    saveDirectory = file.path(getwd(), '..', 'singlePlp') # TODO
+    saveDirectory = file.path(getwd(), '..', 'singlePlp')
   )
 
 # summarizeResults(internalResults$performanceEvaluation$evaluationStatistics, 'Test')
@@ -144,10 +210,86 @@ internalResults <- runPlp(
 
 Identify model covariates. These will be used in the estimation algorithm.
 
-```{r, tidy=FALSE,eval=FALSE}
+```{r}
 covariateImportance <- internalResults$model$covariateImportance
 importantCovariates <- covariateImportance[abs(covariateImportance['covariateValue']) > 0, ]
 estimationCovariates <- importantCovariates[['covariateName']]
-# estimationCovariates <- makeFriendlyNames(estimationCovariates)
+estimationCovariates <- makeFriendlyNames(estimationCovariates)
+```
 
+# External node
+
+## Generate PLP data and evaluate model
+
+```{r}
+externalDatabaseDetails <- createDatabaseDetails(
+  connectionDetails = connectionDetails,
+  cdmDatabaseSchema = "main",
+  cdmDatabaseName = '',
+  cdmDatabaseId = '',  # ?
+  tempEmulationSchema = NULL,  # is this important to avoid further errors in getPlpData?
+  cohortDatabaseSchema = "main",
+  cohortTable = "cohort",
+  targetId = externalTargetId,
+  outcomeDatabaseSchema = "main",
+  outcomeTable = "cohort",
+  outcomeIds = outcomeId,
+  cdmVersion = 5  #?
+)
+
+externalPlpData <- getPlpData(
+  databaseDetails = externalDatabaseDetails,
+  covariateSettings = covSettings,
+  restrictPlpDataSettings = restrictPlpDataSettings)
+
+externalResults <- externalValidateDbPlp(  # TODO how should we avoid duplicated generation of plpData?
+  internalResults$model,
+  validationDatabaseDetails = externalDatabaseDetails)
+```
+
+## Prepare statistics for sharing
+
+```{r}
+externalXY <- transformPlpDataToDataFrame(externalPlpData, populationSettings, outcomeId = outcomeId)
+# TODO verify that estimation covariates are included
+ZExt <- computeTable1LikeTransformation(
+  externalXY[c(estimationCovariates, 'outcome')], outcomeBalance = T, outcomeCol = 'outcome')
+muExt <- colMeans(ZExt)
+```
+
+# Internal node: evaluation of external dataset peformence using internal dataset
+
+```{r}
+# Identify and align predictions with internal data
+tstIdx <- internalResults$prediction$evaluationType == 'Test'
+cvIdx <- internalResults$prediction$evaluationType == 'CV'
+trainIdx <- internalResults$prediction$evaluationType == 'Train'
+evalIdx <- tstIdx | trainIdx
+prediction <- internalResults$prediction[evalIdx, ]
+prediction <- prediction[order(prediction$rowId), ]
+
+# Prepare input for evaluation
+internalXY <- transformPlpDataToDataFrame(internalPlpData, populationSettings, outcomeId = 3)
+if (sum(prediction$outcomeCount != internalXY[['outcome']]) > 0)  # TODO make if more rigorous using rowId
+  stop('need to allign prediction and internalXY')
+ZInt <- computeTable1LikeTransformation(
+  internalXY[c(estimationCovariates, 'outcome')], outcomeBalance = T, outcomeCol = 'outcome')
+
+# TODO - check if we need to hand the outcome
+# TODO add a test to the package to make sure no: Error in rep(TRUE, n1) : invalid 'times' argument. check internalData
+# TODO check vector lengths
+
+internalData <- list(z=ZInt, p = prediction$value, y = internalXY[['outcome']])
+estimatedResults <- estimateExternalPerformanceFromStats(  # TODO automatic selection of parameters?
+  internalData, muExt, divergence = 'entropy', lambda = 1e-2, minW = 1e-6, optimizationMethod = 'dual', nboot = 10)
+```
+
+# Compare evaluation and real results
+
+```{r}
+summarizeResults(internalResults$performanceEvaluation$evaluationStatistics, 'Test')
+summarizeResults(externalResults[[2]]$performanceEvaluation$evaluationStatistics, 'Validation')
+
+cat('Estimated metrics:\n')
+print(estimationSummaryToDF(estimatedResults$summary))
 ```
