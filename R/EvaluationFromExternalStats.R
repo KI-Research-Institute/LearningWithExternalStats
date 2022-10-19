@@ -23,6 +23,55 @@ NULL
 #' @param externalStats a vector of means of transformed feature-outcome pairs
 #'
 #' Reweighing algorithm parameters:
+#' @param reweightSettings an object of class \code{reweightSettings}
+#' @param maxProp maximum proportion between external and internal means
+#' @param nboot number of bootstrap repetitions for confidence interval assessment
+#'
+#' @return a named list with the following fields:
+#'   summary: a name list with pre-weighting diagnostics, post-weighting diagnostics, estimated performance measures
+#'     and bootstrap based performance measures.
+#'   preDiagnosis: more detailed pre-reweighing diagnosis information.
+#'   bootstrap: a data frame of results of single bootstrap repetitions
+#'
+#' @export
+estimateExternalPerformanceFromStatistics <- function(
+    internalData,
+    externalStats,
+    reweightSettings,
+    maxProp = 500,
+    nboot=10)
+{
+  res <- estimateExternalPerformanceFromStats(
+    internalData = internalData,
+    externalStats = externalStats,
+    lambda = reweightSettings$lambda,
+    minSd = reweightSettings$minSd,
+    minW = reweightSettings$minW,
+    distance = reweightSettings$distance,
+    optimizationMethod = reweightSettings$optimizationMethod,
+    maxProp = maxProp,
+    nboot = nboot
+  )
+  res <- list(summary=estimationSummaryToDF(res$summary), preDiagnosis=res$preDiagnosis)
+  return(res)
+}
+
+
+#' Estimate external performance from statistics
+#'
+#' @description Estimate external performance using external statistics and an internal dataset.
+#' This function reweights the internal z matrix with the objective to make the weighted means as close as
+#' possible to the external means represented by mu. Performance measures are estimated using the resulting
+#' weights, the vector of actual outcomes y, and the predicted outcome probabilities p.
+#'
+#'
+#' @param internalData a list that includes internal data and predictions with the following fields:
+#'   z: a data frame of transformed feature-outcome pairs
+#'   y: a vector of outcomes
+#'   p: a vector of predicted outcome probabilities
+#' @param externalStats a vector of means of transformed feature-outcome pairs
+#'
+#' Reweighing algorithm parameters:
 #' @param divergence 'entropy' or 'chi2'.
 #' 'entropy' directs the algorithm to minimize the negative entropy, \eqn{-\sum_i w_i \log w_i}.
 #' 'chi2' is \eqn{\sum_i{w_i-\frac{1}{n}}**2}

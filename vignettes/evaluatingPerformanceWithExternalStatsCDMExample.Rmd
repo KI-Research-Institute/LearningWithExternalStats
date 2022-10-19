@@ -208,16 +208,23 @@ ZInt <- computeTable1LikeTransformation(
 )
 
 # Estimate external performance
-internalData <- list(
+internalData <- list(  # TODO create bundle data
   z=ZInt, 
   p = allignedInternal$prediction$value, 
   y = allignedInternal$dataXY[['outcome']]
 )
 
-estimatedResults <- estimateExternalPerformanceFromStats(
-  internalData, 
-  muExt, 
-  divergence = 'entropy', lambda = 1e-2, minW = 1e-6, optimizationMethod = 'dual', 
+reweightSettings <- createReweightSettings(
+  divergence = 'entropy', 
+  lambda = 1e-2, 
+  minW = 1e-6, 
+  optimizationMethod = 'dual'
+)
+
+estimatedResults <- estimateExternalPerformanceFromStatistics(
+  internalData = internalData,
+  externalStats = muExt,
+  reweightSettings = reweightSettings,
   nboot = 10
 )
 ```
@@ -231,5 +238,5 @@ summarizeResults(
 summarizeResults(
   externalResults[[2]]$performanceEvaluation$evaluationStatistics, 'Validation')
 
-print(estimationSummaryToDF(estimatedResults$summary))
+print(estimatedResults$summary)
 ```

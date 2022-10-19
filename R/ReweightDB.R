@@ -274,3 +274,47 @@ computeTable1LikeTransformation <- function(X, outcomeBalance, outcomeCol='Y') {
   }
   return (Z)
 }
+
+
+#' @title create reweight settings
+#'
+#' @param divergence distributional divergence
+#' @param lambda regularization
+#' @param minSd minimum standard deviation of features
+#' @param minW minimum weight
+#' @param distance distance between mean vectors
+#' @param optimizationMethod primal or dual
+#'
+#' @return
+#' An object of class \code{reweightSettings}
+#'
+#' @export
+
+createReweightSettings <- function(
+    divergence = 'entropy',
+    lambda=1e-6,
+    minSd=1e-4,
+    minW=1e-6,
+    distance = 'l2',
+    optimizationMethod = 'primal'
+    )
+{
+
+  legalDivergences <- c('entropy', 'chi2')
+  if (!(divergence %in% legalDivergences))
+    stop(glue('unsupported divergence {divergence}. Should be in ({legalDivergences}).'))
+  legalOptimizationMethods <- c('primal', 'dual')
+  if (!(optimizationMethod %in% legalOptimizationMethods))
+    stop(glue('unsupported optimization method {optimizationMethod}. Should be in ({legalOptimizationMethods}).'))
+  reweightSettings <- list(
+    divergence = divergence,
+    lambda = lambda,
+    minSd = minSd,
+    minW = minW,
+    distance = distance,
+    optimizationMethod = optimizationMethod
+  )
+  class(reweightSettings) <- 'reweightSettings'
+  return(reweightSettings)
+
+}

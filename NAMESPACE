@@ -3,6 +3,8 @@
 export(WeightedLogLike)
 export(computeMaxSMD)
 export(computeTable1LikeTransformation)
+export(createReweightSettings)
+export(estimateExternalPerformanceFromStatistics)
 export(estimateExternalPerformanceFromStats)
 export(estimateInternalPerformance)
 export(estimationSummaryToDF)
