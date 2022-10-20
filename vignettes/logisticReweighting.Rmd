@@ -47,7 +47,7 @@ Predict the label probabilities in the internal test set
 xFeatures <- colnames(d$externalTest)[1:(ncol(d$externalTest)-1)]
 pInternal <- predict(model1, sapply(d$internalTest[xFeatures], as.numeric), type = "response", s = "lambda.1se")[,1]
 internalResults <- estimateInternalPerformance(d$internalTest[['Y']], pInternal, 2)  # TODO change nboot
-cat(glue('\nInternal AUC = {format(internalResults$AUC, digits=3)}'), '\n')
+cat(glue('\nInternal AUC = {format(internalResults$AUROC, digits=3)}'), '\n')
 ```
 
 ## Estimation using reweighting
@@ -73,25 +73,29 @@ distribution. 'minW' is the minimum allowed weight. `optimizationMethod`
 can be `'dual'` or `'primal'`:
 
 ```{r}
-divergence <- 'entropy'
-lambda <- 1e-2
-minW <- 1e-6
-optimizationMethod <- 'dual'
+reweightSettings <- createReweightSettings(
+  divergence = 'entropy', 
+  lambda = 1e-2, 
+  minW = 1e-6, 
+  optimizationMethod = 'dual'
+)
 ```
 
 Now we are ready to estimate:
 
 ```{r}
 internalData <- list(z=dTransformedInt, p = pInternal, y = d$internalTest[['Y']])
-estimatedResults <- estimateExternalPerformanceFromStats(
-  internalData, muExt, divergence = divergence, lambda = lambda, minW = minW,
-  optimizationMethod = optimizationMethod, nboot = 0)
 
-# cat('Estimated metrics:\n')
-#print(unstack(stack(estimatedResults$summary)), digits =3)
-
-cat(glue('KL divergence between estimated weights and uniform ones = {format(estimatedResults$summary$kl, digits=3)}'),'\n')
-cat(glue('Estimated AUC = {format(estimatedResults$summary$AUC, digits=3)}'),'\n')
+estimatedResults <- estimateExternalPerformanceFromStatistics(
+  internalData = internalData,
+  externalStats = muExt,
+  reweightSettings = reweightSettings,
+  nboot = 0
+)
+```
+and display results:
+```{r}
+print(format(estimatedResults$summary, digits=3))
 ```
 
 The entropy is a measure of the distance between the original and
@@ -105,10 +109,4 @@ Compare to real performance in the test set
 pExternal <- predict(model1, sapply(d$externalTest[xFeatures], as.numeric), type = "response", s = "lambda.1se")[,1]
 extAuc <- auc(roc(d$externalTest[['Y']], pExternal, quiet = TRUE, direction='<'))
 cat(glue('\nExternal AUC = {format(extAuc, digits=3)}'), '\n')
-```
-
-A more detailed view of estimation results:
-
-```{r}
-print(estimationSummaryToDF(estimatedResults$summary))
 ```

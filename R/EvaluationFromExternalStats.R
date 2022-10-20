@@ -307,8 +307,13 @@ getPerformanceMeasures <- function(y, p, w=NULL) {
     warning(glue('Non binary outcome vector, number of classess = {nClasses}'))
     return(NULL)
   }
-  return(list(AUC=pAuc, LogLike=pLogLike, Brier=pBrier,
-              'Observed Risk'=pMeanObservedRisk, 'Predicted Risk'=pMeanPredictionRisk))
+  return(list('AUROC' = pAuc,
+              'Log likelyhood' = pLogLike,
+              'Brier score' = pBrier,
+              'Global calibration mean prediction' = pMeanPredictionRisk,
+              'Global calibration observed risk' = pMeanObservedRisk
+              )
+         )
 }
 
 #' Estimate internal performance

@@ -13,10 +13,18 @@ vignette: >
   %\VignetteEncoding{UTF-8}
 ---
 
-\newpage
+# Overview
+This example demonstrate that usage of `LearningWithExternalStats` package with 
+[patient level prediction (PLP)](https://ohdsi.github.io/PatientLevelPrediction/). 
+To allow working with PLP, we will use another supporting package, `plpDataAdapter`.
+
+The stages of this demonstration are roughly organized according to the specific roles 
+of the internal and external nodes.
+
 # Setup
 
-Setup and data definitions
+The following definitions set the ground to working with `Eunomia` simulated data set:
+
 ```{r setup, message=FALSE, warning=FALSE, eval=TRUE, results='hide'}
 library(Eunomia)  # v1.0.2
 library(FeatureExtraction)  # v3.2.0
@@ -29,11 +37,15 @@ library(LearningWithExternalStats)
 connectionDetails <- Eunomia::getEunomiaConnectionDetails()
 Eunomia::createCohorts(connectionDetails)
 
-# Data definitions
+# Data definitions - cohort IDs
 outcomeId <- 3
-internalTargetId <- 1
-externalTargetId <- 2
+internalTargetId <- 1  # Celecoxib users 
+externalTargetId <- 2  # Diclofenac users
+```
 
+Data settings will be shared among internal and external node except for `targetId` which is node specific.
+
+```{r dataSettings, message=FALSE, warning=FALSE, eval=TRUE, results='hide'}
 covSettings <- createCovariateSettings(
   useDemographicsGender = TRUE,
   useDemographicsAge = TRUE,
@@ -62,9 +74,8 @@ databaseDetails <- createDatabaseDetails(
 
 restrictPlpDataSettings <- createRestrictPlpDataSettings()  # sampleSize = 1000
 ```
-\newpage
 
-# Internal node
+# Internal node: model training and sharing active model covariates
 We begin by defining prediction model settings:
 ```{r modelSettings, message=FALSE, warning=FALSE, eval=TRUE}
 populationSettings <- createStudyPopulationSettings(
@@ -114,8 +125,9 @@ internalPlpData <- getPlpData(
     covariateSettings = covSettings,
     restrictPlpDataSettings = restrictPlpDataSettings)
 ```
-\newpage
+
 We train the model and extract its active covariates:
+
 ```{r message=FALSE, warning=FALSE, eval=TRUE, results='hide'}
 internalResults <- runPlp(
     plpData = internalPlpData,
@@ -135,14 +147,16 @@ internalResults <- runPlp(
 # Identify model covariates. These will be used in the estimation algorithm.
 estimationCovariates <- getLRModelCovariates(internalResults)
 ```
+
 Preliminary experiments have shown that using the subset selected by the model for generation of external statistics
 gives better results than using all covariates.
+
 ```{r show results}
 cat(glue('Selected {length(estimationCovariates)} features'), '\n')
 ```
 The external node should receive now the estimation covariates.
-\newpage
 
+\newpage
 # External node
 The external nodes generate PLP data and prepares statistics for sharing with the internal one. For the sake of 
 algorithm evaluation it also evaluate the model trained on the internal node.
@@ -192,12 +206,14 @@ muExt <- colMeans(ZExt)
 
 # Internal node: evaluation of external dataset peformence using internal dataset
 
+First the data is adapted and transformed:
+
 ```{r message=FALSE, warning=FALSE, eval=TRUE, results='hide'}
 # Transform internal plp data and align it with predictions
-internalXY <- transformPlpDataToDataFrame(
+internalXY <- plpDataAdapter::transformPlpDataToDataFrame(
   internalPlpData, populationSettings, outcomeId = outcomeId)
 
-allignedInternal <- allignDataAndPrediction(
+allignedInternal <- plpDataAdapter::allignDataAndPrediction(
   internalXY, internalResults, subsets = 'Train')
 
 # Compute transformation on covariate outcome pairs
@@ -213,7 +229,16 @@ internalData <- list(  # TODO create bundle data
   p = allignedInternal$prediction$value, 
   y = allignedInternal$dataXY[['outcome']]
 )
+```
 
+Before we re-weight, we should define parameters of the algorithms. The
+`divergence` parameter defines the type of divergence between the
+weighted distribution and the uniform distribution. `lambda` controls
+the tradeoff between matching accuracy and closeness to the uniform
+distribution. 'minW' is the minimum allowed weight. `optimizationMethod`
+can be `'dual'` or `'primal'`:
+
+```{r message=FALSE, warning=FALSE, eval=TRUE, results='hide'}
 reweightSettings <- createReweightSettings(
   divergence = 'entropy', 
   lambda = 1e-2, 
@@ -233,24 +258,18 @@ estimatedResults <- estimateExternalPerformanceFromStatistics(
 
 ```{r message=FALSE, warning=FALSE, eval=TRUE}
   plpMetrics <- c(
-    'populationSize',
-    'outcomeCount',
-    'AUROC',
-    '95% lower AUROC',
-    '95% upper AUROC',
-    'brier score',
-    'calibrationInLarge mean prediction',
-    'calibrationInLarge observed risk'
+    'populationSize','outcomeCount','AUROC','95% lower AUROC','95% upper AUROC',
+    'brier score','calibrationInLarge mean prediction','calibrationInLarge observed risk'
   )
-  internalPerf <- internalResults$performanceEvaluation$evaluationStatistics
-  displayRows <- (internalPerf['evaluation']=='Test') & (internalPerf[['metric']] %in% plpMetrics)
+  intPerf <- internalResults$performanceEvaluation$evaluationStatistics
+  rows <- (intPerf['evaluation']=='Test') & (intPerf[['metric']] %in% plpMetrics)
   cat('Internal performance:\n')
-  print(format(internalPerf[displayRows, c('metric', 'value')], digits=3))
+  print(format(intPerf[rows, c('metric', 'value')], digits=3))
   
-  externalPerf <- externalResults[[2]]$performanceEvaluation$evaluationStatistics
-  displayRows <- (externalPerf['evaluation']=='Validation') & (externalPerf[['metric']] %in% plpMetrics)
+  extPerf <- externalResults[[2]]$performanceEvaluation$evaluationStatistics
+  rows <- (extPerf['evaluation']=='Validation') & (extPerf[['metric']] %in% plpMetrics)
   cat('External performance:\n')
-  print(format(externalPerf[displayRows, c('metric', 'value')], digits=3))
+  print(format(extPerf[rows, c('metric', 'value')], digits=3))
   
   cat('Estimated exteranl performance','\n')
   print(estimatedResults$summary)
