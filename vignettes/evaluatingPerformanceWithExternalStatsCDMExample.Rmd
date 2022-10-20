@@ -225,18 +225,33 @@ estimatedResults <- estimateExternalPerformanceFromStatistics(
   internalData = internalData,
   externalStats = muExt,
   reweightSettings = reweightSettings,
-  nboot = 10
+  nboot = 0
 )
 ```
 
 # Compare evaluation and real results
 
 ```{r message=FALSE, warning=FALSE, eval=TRUE}
-summarizeResults(
-  internalResults$performanceEvaluation$evaluationStatistics, 'Test')
-
-summarizeResults(
-  externalResults[[2]]$performanceEvaluation$evaluationStatistics, 'Validation')
-
-print(estimatedResults$summary)
+  plpMetrics <- c(
+    'populationSize',
+    'outcomeCount',
+    'AUROC',
+    '95% lower AUROC',
+    '95% upper AUROC',
+    'brier score',
+    'calibrationInLarge mean prediction',
+    'calibrationInLarge observed risk'
+  )
+  internalPerf <- internalResults$performanceEvaluation$evaluationStatistics
+  displayRows <- (internalPerf['evaluation']=='Test') & (internalPerf[['metric']] %in% plpMetrics)
+  cat('Internal performance:\n')
+  print(format(internalPerf[displayRows, c('metric', 'value')], digits=3))
+  
+  externalPerf <- externalResults[[2]]$performanceEvaluation$evaluationStatistics
+  displayRows <- (externalPerf['evaluation']=='Validation') & (externalPerf[['metric']] %in% plpMetrics)
+  cat('External performance:\n')
+  print(format(externalPerf[displayRows, c('metric', 'value')], digits=3))
+  
+  cat('Estimated exteranl performance','\n')
+  print(estimatedResults$summary)
 ```
