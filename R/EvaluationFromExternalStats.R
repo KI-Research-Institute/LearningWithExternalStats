@@ -120,7 +120,7 @@ estimateExternalPerformanceFromStats <- function(
     dbRes[['n']] <- sum(widx)
     if (is.factor(y)) # TODO is this the right place
       y <- as.numeric(y)-1
-    dbRes[['n y']] <- as.numeric(t(widx) %*% y)
+    dbRes[['n outcome']] <- as.numeric(t(widx) %*% y)
     # Post diagnostics
     postD <- postDiagnostics(w, z, mu)
     dbRes <- c(dbRes, postD)
@@ -258,7 +258,11 @@ postDiagnostics <- function(w, z, mu) {
   chi2ToUnif <- n*sum((p-1/n)**2)  #  = \sum(p-1/n)^2/1/n
   maxWeightedSMD <- computeMaxSMD(mu, z, p)
 
-  diagnostics <- list(maxw=max(w), 'chi2-u' = chi2ToUnif, kl = kl, maxWeightedSMD = maxWeightedSMD)  # TODO add diagnostics
+  diagnostics <- list(
+    'Max weight'=max(w),
+    'chi2 to uniform' = chi2ToUnif,
+    kl = kl,
+    'Max Weighted SMD' = maxWeightedSMD)  # TODO add diagnostics
   return(diagnostics)
 }
 
@@ -328,7 +332,7 @@ getPerformanceMeasures <- function(y, p, w=NULL) {
 estimateInternalPerformance <- function(y, p, nboot) {
   dbRes <- list()
   dbRes[['n']] <- length(y)
-  dbRes[['n y']] <- sum(y)
+  dbRes[['n outcome']] <- sum(y)
   m <- getPerformanceMeasures(y, p)
   dbRes <- c(dbRes, m)
   br <- matrix(nrow = nboot, ncol = length(m), dimnames = list(NULL, names(m)))
