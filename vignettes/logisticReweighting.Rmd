@@ -1,6 +1,12 @@
 ---
 title: "Evaluation using external statistics - example with a logisitic model"
-output: rmarkdown::html_vignette
+output: 
+  pdf_document:
+    number_sections: no
+    toc: no
+  rmarkdown::html_vignette:
+    number_sections: no
+    toc: no
 vignette: >
   %\VignetteIndexEntry{Evaluation using external statistics - example with a logisitic model}
   %\VignetteEncoding{UTF-8}
@@ -45,9 +51,10 @@ Predict the label probabilities in the internal test set
 
 ```{r}
 xFeatures <- colnames(d$externalTest)[1:(ncol(d$externalTest)-1)]
-pInternal <- predict(model1, sapply(d$internalTest[xFeatures], as.numeric), type = "response", s = "lambda.1se")[,1]
-internalResults <- estimateInternalPerformance(d$internalTest[['Y']], pInternal, 2)  # TODO change nboot
-cat(glue('\nInternal AUC = {format(internalResults$AUROC, digits=3)}'), '\n')
+internalX <- sapply(d$internalTest[xFeatures], as.numeric)
+pInternal <- predict(model1, internalX, type = "response", s = "lambda.1se")[,1]
+internalAUC <- auc(roc(d$internalTest[['Y']], pInternal, direction = "<", quiet = T))
+cat(glue('\nInternal AUC = {format(internalAUC, digits=3)}'), '\n')
 ```
 
 ## Estimation using reweighting
@@ -106,7 +113,8 @@ reweighted distributions.
 Compare to real performance in the test set
 
 ```{r}
-pExternal <- predict(model1, sapply(d$externalTest[xFeatures], as.numeric), type = "response", s = "lambda.1se")[,1]
+xExternal <- sapply(d$externalTest[xFeatures], as.numeric)
+pExternal <- predict(model1, xExternal, type = "response", s = "lambda.1se")[,1]
 extAuc <- auc(roc(d$externalTest[['Y']], pExternal, quiet = TRUE, direction='<'))
 cat(glue('\nExternal AUC = {format(extAuc, digits=3)}'), '\n')
 ```

@@ -191,7 +191,7 @@ externalResults <- externalValidateDbPlp(  # TODO avoid duplicated generation of
 ## Prepare statistics for sharing
 
 ```{r message=FALSE, warning=FALSE, eval=TRUE, results='hide'}
-externalXY <- transformPlpDataToDataFrame(
+externalXY <- plpDataAdapter::transformPlpDataToDataFrame(
   externalPlpData, populationSettings, outcomeId = outcomeId)
 
 ZExt <- computeTable1LikeTransformation(
@@ -202,6 +202,8 @@ ZExt <- computeTable1LikeTransformation(
 
 muExt <- colMeans(ZExt)
 ```
+These statistics are sent to the internal node.
+
 \newpage
 
 # Internal node: evaluation of external dataset peformence using internal dataset
