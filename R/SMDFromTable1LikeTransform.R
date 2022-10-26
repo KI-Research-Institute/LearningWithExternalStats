@@ -27,7 +27,7 @@ computeMaxSMD <- function(mu, Z, w=NULL) {
       if (length(vars) == 1)
         d[i] <- binaryVarSMD(mu[vars], Z[,vars], w)
       else
-        warning(glue('Column set {vars}, size not fit for SMD'))
+        warning(glue('Column set {i}, size not fit for SMD'))
     }
   }
   return(max(d))

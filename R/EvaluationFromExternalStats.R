@@ -184,16 +184,21 @@ estimationSummaryToDF <-function(estimationSummary) {
 preDiagnostics <- function(z, mu, maxProp, verbose=F) {
   # remove features with Na entries in table1
   representedFeatures <- names(mu[(!is.na(mu))] )
+  print(length(representedFeatures))
   if (verbose)
     ParallelLogger::logInfo(glue("Dataset has {length(representedFeatures)} non-na entries"), "\n")
   n1 <- nrow(z)
   removeUnrepresentedSubjects = T
   # TODO the following code assumes all entries represent proportions
-  if (sum(mu[representedFeatures]==0)>0 & removeUnrepresentedSubjects) {
+  nZero <- sum(mu[representedFeatures]==0)
+  if (nZero>0 & removeUnrepresentedSubjects) {
     if (verbose)
       ParallelLogger::logInfo(
-        paste('Removing subjects with unrepresented propertis:', paste(mu[mu==0], collapse = ' '), sep = ' '))
-    zidx <- rowSums(abs(z[, mu==0]))==0
+        paste('Removing subjects with unrepresented properties:', paste(mu[mu==0], collapse = ' '), sep = ' '))
+    if (nZero > 1)
+      zidx <- rowSums(abs(z[, mu==0]))==0
+    else
+      zidx <- z[mu==0]==0
     representedFeatures <- representedFeatures[mu[representedFeatures] != 0]
     if (verbose)
       ParallelLogger::logInfo(glue('Maintained {sum(zidx)}/{n1} subjects.\n'))
