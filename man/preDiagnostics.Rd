@@ -4,7 +4,7 @@
 \alias{preDiagnostics}
 \title{Pre re-weighting diagnostics}
 \usage{
-preDiagnostics(z, mu, maxProp, verbose = F)
+preDiagnostics(z, mu, maxProp, maxDiff, npMinRatio = 4)
 }
 \arguments{
 \item{z}{a data frame of transformed feature-outcome pairs}
@@ -12,14 +12,10 @@ preDiagnostics(z, mu, maxProp, verbose = F)
 \item{mu}{a vector of means of transformed feature-outcome pairs}
 
 \item{maxProp}{maximum proportion between internal and external means to determine imbalance}
-
-\item{verbose}{Boolean indicator for logging}
 }
 \value{
 a named list with the following fields:
-representedfeatured: a vecotr of represented feature names
-zidx: indices of valid subjects
-imbalanced: indicators of imbalance
+...
 }
 \description{
 compare external expectations and internal means before reweighting

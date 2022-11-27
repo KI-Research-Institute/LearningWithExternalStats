@@ -2,15 +2,14 @@
 % Please edit documentation in R/EvaluationFromExternalStats.R
 \name{estimateExternalPerformanceFromStatistics}
 \alias{estimateExternalPerformanceFromStatistics}
-\title{evaluation from external stats
-Estimate external performance from statistics}
+\title{Estimate external model performance from statistics and internal
+test data}
 \usage{
 estimateExternalPerformanceFromStatistics(
   internalData,
   externalStats,
-  reweightSettings,
-  maxProp = 500,
-  nboot = 10
+  externalEstimatorSettings,
+  createEstimationLogger = T
 )
 }
 \arguments{
@@ -23,22 +22,22 @@ p: a vector of predicted outcome probabilities}
 
 Reweighing algorithm parameters:}
 
-\item{reweightSettings}{an object of class \code{reweightSettings}}
-
-\item{maxProp}{maximum proportion between external and internal means}
-
-\item{nboot}{number of bootstrap repetitions for confidence interval assessment}
+\item{externalEstimatorSettings}{an object of class \code{externalEstimatorSettings}}
 }
 \value{
-a named list with the following fields:
-summary: a name list with pre-weighting diagnostics, post-weighting diagnostics, estimated performance measures
-and bootstrap based performance measures.
-preDiagnosis: more detailed pre-reweighing diagnosis information.
-bootstrap: a data frame of results of single bootstrap repetitions
+an object of \code{estimatedExternalPerformanceFromStatistics} with the following fields:
+
+\itemize{
+\item{\code{status}:} {execution status, either \code{'Success'} or \code{'Failure'}}
+\item{\code{preDiagnosis}:} {Pre-diagnosis results object}
+\item{\code{estimationTime}:} {execution time}
+\item{\code{estimation}:} {a data-frame with a single column \code{'value'} and row-names that determine various
+estimators.}
+}
 }
 \description{
 Estimate external performance using external statistics and an internal dataset.
-This function reweights the internal z matrix with the objective to make the weighted means as close as
-possible to the external means represented by mu. Performance measures are estimated using the resulting
-weights, the vector of actual outcomes y, and the predicted outcome probabilities p.
+This function reweights the internal \code{z} matrix with the objective to make the weighted means as close as
+possible to the external means represented by \code{externalStats}. Performance measures are estimated using the
+resulting weights, the vector of actual outcomes \code{y}, and the predicted outcome probabilities \code{p}.
 }

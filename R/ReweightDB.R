@@ -38,10 +38,11 @@ NULL
 #' 'chi2' is \eqn{\sum_i{w_i-\frac{1}{n}}**2}
 #' @param lambda lambda - regularization parameter
 #' @param minSd minimum variance for a columns to be included
-#' @param minW mimimum weight
+#' @param minW minimum weight
 #' @param distance distance between means, either 'l1' or 'l2'
 #' @param optimizationMethod primal or dual. Currently dual works only with entropy divergence
-#' @param verbose a boolean flag for output messages
+#' @param solver solver for convex problems. One of "ECOS" "ECOS_BB" "SCS" "OSQP"
+#' @param verbose a Boolean flag for output messages
 #'
 #' @return
 #' A vector of weights
@@ -49,13 +50,14 @@ NULL
 #' @export
 reweightByMeans <- function(
   Z, mu, divergence = 'entropy', lambda=1e-6, minSd=1e-4, minW=1e-6, distance = 'l2', optimizationMethod = 'primal',
-  verbose=FALSE) {
+  solver = 'ECOS', verbose=FALSE)
+{
   # TODO in the regularized case, hyper param may depend on the number of features/samples
   # Find optimal weights
   if (optimizationMethod == 'primal')
-    w_hat <- primalReweightByMeans(Z, mu, divergence, lambda, minSd, minW, distance, verbose)
+    w_hat <- primalReweightByMeans(Z, mu, divergence, lambda, minSd, minW, distance, solver, verbose)
   else
-    w_hat <- dualReweightByMeans(Z, mu, lambda, minSd, minW, verbose)
+    w_hat <- dualReweightByMeans(Z, mu, lambda, minSd, minW, solver, verbose)
 
   min_w <- min(w_hat)
   mean_w <- mean(w_hat)
@@ -94,12 +96,13 @@ reweightByMeans <- function(
 #' @param minSd minimum variance for a columns to be included
 #' @param minW mimimum weight
 #' @param distance distance between means, either 'l1' or 'l2'
+#' @param solver solver for convex problem
 #' @param verbose a boolean flag for output messages
 #'
 #' @return
 #' A vector of weights
 #'
-primalReweightByMeans <- function(Z, mu, divergence,lambda, minSd, minW, distance, verbose) {
+primalReweightByMeans <- function(Z, mu, divergence,lambda, minSd, minW, distance, solver, verbose) {
   normalized <- normalizeDataAndExpectations(Z, mu, minSd)
   n <- nrow(normalized$Z)
   w <- Variable(n, 1)
@@ -109,11 +112,17 @@ primalReweightByMeans <- function(Z, mu, divergence,lambda, minSd, minW, distanc
 
   if (divergence == 'entropy')    fDivergence <- -mean(entr(w))
   else if (divergence == 'chi2')  fDivergence <- norm2(w-(1/n)) ** 2
-  else                            stop(glue("unsuported divergence type {divergence}"))
+  else {
+    ParallelLogger::logError(glue("unsuported divergence type {divergence}"))
+    return(rep(NaN, n))
+  }
 
   if (distance == 'l2')       expectationsDistance <- norm2(t(normalized$Z) %*% w - normalized$mu)
   else if (distance == 'l1')  expectationsDistance <- norm1(t(normalized$Z) %*% w - normalized$mu)
-  else                        stop(glue("unsuported distance type {distance}"))
+  else {
+    ParallelLogger::logError(glue("unsuported distance type {distance}"))
+    return(rep(NaN, n))
+  }
 
   if (lambda > 0) {
     if (verbose) cat(glue('Reweighting using {divergence}, {distance}, lambda = {lambda}, minW = {minW}'), '\n')
@@ -125,7 +134,7 @@ primalReweightByMeans <- function(Z, mu, divergence,lambda, minSd, minW, distanc
     constr <- list(w >= minW, sum(w) == 1, (t(normalized$Z) %*% w) == normalized$mu)
   }
   problem <- Problem(objective, constraints = constr)
-  result <- solve(problem, solver = "ECOS", verbose = FALSE)
+  result <- solve(problem, solver = solver, verbose = FALSE)
   # The status of the solution can be "optimal", "optimal_inaccurate", "infeasible", "infeasible_inaccurate",
   # "unbounded", "unbounded_inaccurate", or "solver_error"
   if (result$status != 'optimal') {
@@ -155,12 +164,13 @@ primalReweightByMeans <- function(Z, mu, divergence,lambda, minSd, minW, distanc
 #' @param lambda lambda - regularization parameter
 #' @param minSd minimum variance for a columns to be included
 #' @param minW mimimum weight
+#' @param solver solver for convex problem
 #' @param verbose a boolean flag for output messages
 #'
 #' @return
 #' A vector of weights
 #'
-dualReweightByMeans <- function(Z, mu, lambda, minSd, minW, verbose) {
+dualReweightByMeans <- function(Z, mu, lambda, minSd, minW, solver, verbose) {
   normalized <- normalizeDataAndExpectations(Z, mu, minSd)
   m <- ncol(normalized$Z)
   n <- nrow(normalized$Z)
@@ -175,7 +185,7 @@ dualReweightByMeans <- function(Z, mu, lambda, minSd, minW, verbose) {
     constr <- list(norm2(nu[1:m]) <= (1/lambda))
     problem <- Problem(objective, constraints = constr)
   }
-  result <- solve(problem)
+  result <- solve(problem, solver=solver)
 
   if (result$status != 'optimal') {
     warning(glue('non-optimal results, returning NaNs, data size = {n} * {length(mu)}'))
@@ -214,8 +224,8 @@ normalizeDataAndExpectations <- function(Z, mu, minSd) {
   sdZ <- apply(Z, 2, sd)
   useCols <- sdZ>minSd # remove columns with low variance
   if (sum(!useCols) > 0) {
-    warning(
-      sprintf("Removing %d columns with low variance (<%.2g). PLEASE EXAMINE THESE COLUMNS.", sum(!useCols), minSd))
+    message(
+      sprintf("Removing %d columns with low variance (<%.2g). Please examing this columns.", sum(!useCols), minSd))
     # print(sdX[!useCols])
     Z <- Z[,names(Z)[useCols]]  # remove low variance columns todo: flag a positivity issue
     sdZ <- sdZ[useCols]
@@ -284,6 +294,7 @@ computeTable1LikeTransformation <- function(X, outcomeBalance, outcomeCol='Y') {
 #' @param minW minimum weight
 #' @param distance distance between mean vectors
 #' @param optimizationMethod primal or dual
+#' @param solver solver
 #'
 #' @return
 #' An object of class \code{reweightSettings}
@@ -296,7 +307,8 @@ createReweightSettings <- function(
     minSd=1e-4,
     minW=1e-6,
     distance = 'l2',
-    optimizationMethod = 'primal'
+    optimizationMethod = 'primal',
+    solver = 'ECOS'
     )
 {
 
@@ -312,7 +324,8 @@ createReweightSettings <- function(
     minSd = minSd,
     minW = minW,
     distance = distance,
-    optimizationMethod = optimizationMethod
+    optimizationMethod = optimizationMethod,
+    solver = solver
   )
   class(reweightSettings) <- 'reweightSettings'
   return(reweightSettings)

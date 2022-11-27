@@ -12,6 +12,7 @@ primalReweightByMeans(
   minSd,
   minW,
   distance,
+  solver,
   verbose
 )
 }
@@ -33,6 +34,8 @@ databse.}
 \item{minW}{mimimum weight}
 
 \item{distance}{distance between means, either 'l1' or 'l2'}
+
+\item{solver}{solver for convex problem}
 
 \item{verbose}{a boolean flag for output messages}
 }

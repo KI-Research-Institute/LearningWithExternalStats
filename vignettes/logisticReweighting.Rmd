@@ -80,12 +80,18 @@ distribution. 'minW' is the minimum allowed weight. `optimizationMethod`
 can be `'dual'` or `'primal'`:
 
 ```{r}
-reweightSettings <- createReweightSettings(
-  divergence = 'entropy', 
-  lambda = 1e-2, 
-  minW = 1e-6, 
-  optimizationMethod = 'dual'
-)
+externalEstimatorSettings <- createExternalEstimatorSettings(
+  divergence = 'entropy',  # entropy, chi2
+  lambda = 1e-1,
+  minW = 0,
+  optimizationMethod = 'dual',  # dual, primal
+  stratifiedSampling = T,
+  nMaxReweight = 10000,
+  nRepetitions = 1,
+  maxProp = 500,
+  outputDir = getwd(),
+  maxCores = 15
+  )
 ```
 
 Now we are ready to estimate:
@@ -96,13 +102,12 @@ internalData <- list(z=dTransformedInt, p = pInternal, y = d$internalTest[['Y']]
 estimatedResults <- estimateExternalPerformanceFromStatistics(
   internalData = internalData,
   externalStats = muExt,
-  reweightSettings = reweightSettings,
-  nboot = 0
+  externalEstimatorSettings = externalEstimatorSettings
 )
 ```
 and display results:
 ```{r}
-print(format(estimatedResults$summary, digits=3))
+print(format(estimatedResults$estimation['AUROC', ], digits=3))
 ```
 
 The entropy is a measure of the distance between the original and

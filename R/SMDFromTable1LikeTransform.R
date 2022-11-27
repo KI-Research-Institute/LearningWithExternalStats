@@ -26,8 +26,12 @@ computeMaxSMD <- function(mu, Z, w=NULL) {
     else {
       if (length(vars) == 1)
         d[i] <- binaryVarSMD(mu[vars], Z[,vars], w)
-      else
+      else {
+        cat(glue('n column sets={p}, p={length(mu)}'), '\n')
+        cat('Column set variables', vars, '\n')
+        warning(glue('Column set {i}, size not fit for SMD'), immediate. = T)
         warning(glue('Column set {i}, size not fit for SMD'))
+      }
     }
   }
   return(max(d))
@@ -69,16 +73,15 @@ extractInteractionColumnSets <- function(featureNames) {
   covariates <- mainVars[mainVars!='Y']
   p <- length(covariates)
   # TODO - make this more efficient
-  nSets <- 2*p + 1 # Assuming table 1?
-  colSets <- vector(mode = 'list', length = nSets)
-  colSets[[1]] <- c('Y')
+  colSets <- list(list(c('Y')))
   for (i in 1:p) {
     currentVar <- covariates[i]
     idxs <- sapply(featureNames, function(x) (startsWith(x, paste(currentVar, '_', sep='') )) )
     varFeatures <- featureNames[idxs]
     for (y in 0:1) {
       idxs <- sapply(varFeatures, function(x) (endsWith(x, paste('y', as.character(y), sep='') )) )
-      colSets[[y+2*i]] <- varFeatures[idxs]
+      if (any(idxs))
+        colSets[[length(colSets)+1]] <- varFeatures[idxs]
     }
   }
   return(colSets)

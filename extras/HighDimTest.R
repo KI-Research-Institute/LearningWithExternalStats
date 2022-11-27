@@ -1,57 +1,53 @@
 rm(list=ls())
-library(LearningWithExternalStats)
+
 library(glue)
-library(glmnet)
-library(pROC)
+library(LearningWithExternalStats)
+
 script_dir <- dirname(rstudioapi::getSourceEditorContext()$path)
 setwd(script_dir)
-source('../data-raw/anchorModel.R')
+source('./efesSimulationTests.R')
+source('./plotEfesSimulationResults.R')
 
-n <- 50000
+# Set output dir
+outputDir = 'C:\\localdev\\projects\\robustness\\high-dim'  # getwd(), 'D:\\projects\\robustness\\high-dim'
 
-# Generate simulated data
-hyperParams = getDefaultAnchorHyperParams()
-hyperParams$sigma_B_X_AH = 0.5  # Medium shift
-params <- anchorParams(hyperParams)
-params$A <- 0
-internalTrain <- sampleAnchor(params, n)
-internalTest <- sampleAnchor(params, n)
-params$A <- 1
-externalTest <- sampleAnchor(params, n)
-d <- list(internalTrain = internalTrain, internalTest = internalTest, externalTest = externalTest)
+testParams <- getDefaultEfesTestParams(outputDir = outputDir)
+bigTest <- F
+bigTest2 <- F
+testParams$sigma_B_Y_XA_factor <- 3
+for (sigma_B_X_AH in c(0, 0.5)) {  # Degree of proximity assumption violation
+  testParams$sigma_B_X_AH <- sigma_B_X_AH
+  if (bigTest) {
+    testParams$loadCached = F  # load or train from scratch
+    testParams$n <- 300000
+    testParams$p <- 500
+    testParams$ntop <- 500  # maximum number of features to re-weight on
+    testParams$outcomeOffset <- -log(250)
+    testParams$nTest <- 10
+    testParams$estimationParams[[1]]$nMaxReweight <- 5000
+    testParams$estimationParams[[2]]$nMaxReweight <- 5000
+  } else {
+    testParams$loadCached = F  # load or train from scratch
+    testParams$n <- 5000
+    testParams$p <- 100
+    testParams$ntop <- 100
+    testParams$outcomeOffset <- -log(2)
+    testParams$nTest <- 5
+    testParams$estimationParams[[1]]$nMaxReweight <- 1000
+    testParams$estimationParams[[2]]$nMaxReweight <- 1000
+    testParams$estimationParams[[2]]$nRepetitions <- 5  # number of estimation repetitions
+    testParams$estimationParams[[1]]$maxCores <- 3
+    testParams$estimationParams[[2]]$maxCores <- 3
+  }
+  print(testParams)
+  res <- repeatedTests(testParams)
+  plotHighDimResults(testParams)
 
-# Train a model
-xFeatures <- colnames(d$internalTest)[1:(ncol(d$internalTest)-1)]
-model1 <- cv.glmnet(sapply(d$internalTrain[xFeatures], as.numeric), d$internalTrain[['Y']],
-                    family = "binomial", type.measure = "auc", alpha = 0.5)
-
-# Predict the label probabilities in the internal test set
-internalX <- sapply(d$internalTest[xFeatures], as.numeric)
-pInternal <- predict(model1, internalX, type = "response", s = "lambda.1se")[,1]
-internalAUC <- auc(roc(d$internalTest[['Y']], pInternal, direction = "<", quiet = T))
-cat(glue('\nInternal AUC = {format(internalAUC, digits=3)}'), '\n')
-
-## Estimation using reweighting
-dTransformedInt <- computeTable1LikeTransformation(d$internalTest, outcomeBalance=TRUE)
-dTransformedExt <- computeTable1LikeTransformation(d$externalTest, outcomeBalance=TRUE)
-muExt <- colMeans(dTransformedExt)
-reweightSettings <- createReweightSettings(
-  divergence = 'entropy',
-  lambda = 1e-2,
-  minW = 1e-6,
-  optimizationMethod = 'dual'
-)
-internalData <- list(z=dTransformedInt, p = pInternal, y = d$internalTest[['Y']])
-estimatedResults <- estimateExternalPerformanceFromStatistics(
-  internalData = internalData,
-  externalStats = muExt,
-  reweightSettings = reweightSettings,
-  nboot = 0
-)
-print(format(estimatedResults$summary, digits=3))
-
-# External results
-xExternal <- sapply(d$externalTest[xFeatures], as.numeric)
-pExternal <- predict(model1, xExternal, type = "response", s = "lambda.1se")[,1]
-extAuc <- auc(roc(d$externalTest[['Y']], pExternal, quiet = TRUE, direction='<'))
-cat(glue('\nExternal AUC = {format(extAuc, digits=3)}'), '\n')
+  if (bigTest && bigTest2) {
+    testParams$estimationParams[[1]]$nRepetitions <- 10  # number of estimation repetitions
+    testParams$estimationParams[[2]]$nMaxReweight <- 10000
+    print(testParams)
+    res <- repeatedTests(testParams)
+    plotHighDimResults(testParams)
+  }
+}

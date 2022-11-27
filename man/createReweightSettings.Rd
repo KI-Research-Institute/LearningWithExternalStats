@@ -10,7 +10,8 @@ createReweightSettings(
   minSd = 1e-04,
   minW = 1e-06,
   distance = "l2",
-  optimizationMethod = "primal"
+  optimizationMethod = "primal",
+  solver = "ECOS"
 )
 }
 \arguments{
@@ -25,6 +26,8 @@ createReweightSettings(
 \item{distance}{distance between mean vectors}
 
 \item{optimizationMethod}{primal or dual}
+
+\item{solver}{solver}
 }
 \value{
 An object of class \code{reweightSettings}

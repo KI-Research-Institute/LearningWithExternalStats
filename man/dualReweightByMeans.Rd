@@ -5,7 +5,7 @@
 \title{Reweight an internal database to match the means of an external one using
 a dual formulation of a weight optimization problem.}
 \usage{
-dualReweightByMeans(Z, mu, lambda, minSd, minW, verbose)
+dualReweightByMeans(Z, mu, lambda, minSd, minW, solver, verbose)
 }
 \arguments{
 \item{Z}{a data frame where every row stores a sample of the internal databse.}
@@ -17,6 +17,8 @@ dualReweightByMeans(Z, mu, lambda, minSd, minW, verbose)
 \item{minSd}{minimum variance for a columns to be included}
 
 \item{minW}{mimimum weight}
+
+\item{solver}{solver for convex problem}
 
 \item{verbose}{a boolean flag for output messages}
 }
