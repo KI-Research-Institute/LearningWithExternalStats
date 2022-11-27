@@ -203,7 +203,8 @@ estimateExternalPerformanceFromStatistics <- function(
       ParallelLogger::logWarn(glue('Max weighted SMD > {wsmdWarnTh}'))  # TODO which feature?
     result$status = 'Success'
   }
-  result$estimation = data.frame(value=unlist(c(list(as.list(meanResults), as.list(s)))))
+  allResults <- unlist(c(list(as.list(meanResults), as.list(s))))
+  result$estimation = data.frame(value=allResults)
   return(result)
 }
 
@@ -516,11 +517,11 @@ summarizeBootstrap <- function(b, probs=c(0.025, 0.5, 0.975)) {
     r <- b[,measure]  # TODO learn how to extract vectors from matrices
     resultsQuantiles <- quantile(r, probs = probs, na.rm = TRUE)
     for (i in 1:length(probs))
-      s[[paste(measure, as.character(probs[i]))]] = resultsQuantiles[[i]]
+      s[[paste(as.character(round(probs[i]*100, digits=1)), 'percentile', measure)]] = resultsQuantiles[[i]]
 
     s[[paste(measure, 'mean')]] = mean(r, na.rm = TRUE)
     s[[paste(measure, 'sd')]] = sd(r, na.rm = TRUE)
-    s[[paste(measure, 'n boot')]] = nboot - sum(is.na(r))
+    s[[paste(measure, 'repetitions')]] = nboot - sum(is.na(r))
   }
   return(s)
 }

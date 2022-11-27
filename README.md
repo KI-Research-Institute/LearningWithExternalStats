@@ -13,6 +13,17 @@ devtools::install_github("KI-Research-Institute/LearningWithExternalStats")
 
 ## Overview
 
+This package estimates the performance of a predictive model of an external data-set when there is only access to
+limited statistics in the external set and to detailed samples in the internal one. The main function works in
+three stages:
+
 ### Pre-diagnostics
-### Estimation
+This stage tests the feasibility of re-weighting the internal set to achieve external statistics. 
+
+### Re-weighting
+This stage re-weights the internal data such that the weighted set has similar statistics to the external ones.
+
 ### Post-diagnostics
+
+
+### Estimation

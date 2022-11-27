@@ -80,10 +80,10 @@ externalEstimatorSettings <- createExternalEstimatorSettings(
   optimizationMethod = 'dual',  # dual, primal
   stratifiedSampling = T,
   nMaxReweight = 10000,
-  nRepetitions = 1,
+  nRepetitions = 100,
   maxProp = 500,
   outputDir = getwd(),
-  maxCores = 15
+  maxCores = 3
   )
 ```
 
@@ -97,11 +97,20 @@ estimatedResults <- estimateExternalPerformanceFromStatistics(
   externalStats = muExt,
   externalEstimatorSettings = externalEstimatorSettings
 )
+print(estimatedResults)
 ```
 and display results:
 ```{r, message=FALSE, warning=FALSE, eval=TRUE}
-showResults <- rownames(estimatedResults$estimation) %in% c('AUROC', 'AUROC 0.025', 'AUROC 0.975' ,'n', 'n outcome', 'Brier score')
-print(format(estimatedResults$estimation[showResults, ], digits=3))
+showResults <- c(
+  'n', 'n outcome', 'Max Weighted SMD',
+  'AUROC', '2.5 percentile AUROC', '97.5 percentile AUROC', 
+  'n repetitions',
+  'Brier score',
+  'Global calibration mean prediction',
+  'Global calibration observed risk')
+estimationView <- estimatedResults$estimation[showResults, , drop = F]
+estimationView[, 'value'] <- apply(estimationView, 1, function(x) {sprintf('%.3g', x)})
+print(estimationView)
 ```
 
 The entropy is a measure of the distance between the original and

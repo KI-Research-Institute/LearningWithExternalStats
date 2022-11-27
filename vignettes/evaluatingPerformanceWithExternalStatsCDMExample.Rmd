@@ -14,11 +14,11 @@ vignette: >
 ---
 
 # Overview
-This example demonstrate that usage of `LearningWithExternalStats` package with 
-[patient level prediction (PLP)](https://ohdsi.github.io/PatientLevelPrediction/). 
+This example demonstrate that usage of `LearningWithExternalStats` package with
+[patient level prediction (PLP)](https://ohdsi.github.io/PatientLevelPrediction/).
 To allow working with PLP, we will use another supporting package, `plpDataAdapter`.
 
-The stages of this demonstration are roughly organized according to the specific roles 
+The stages of this demonstration are roughly organized according to the specific roles
 of the internal and external nodes.
 
 # Setup
@@ -32,14 +32,12 @@ library(PatientLevelPrediction)  # v6.0.4
 library(glue)
 library(plpDataAdapter)
 library(LearningWithExternalStats)
-
 # Activate Eunomia demo database
 connectionDetails <- Eunomia::getEunomiaConnectionDetails()
 Eunomia::createCohorts(connectionDetails)
-
 # Data definitions - cohort IDs
 outcomeId <- 3
-internalTargetId <- 1  # Celecoxib users 
+internalTargetId <- 1  # Celecoxib users
 externalTargetId <- 2  # Diclofenac users
 ```
 
@@ -56,7 +54,6 @@ covSettings <- createCovariateSettings(
   useVisitConceptCountLongTerm = TRUE,
   longTermStartDays = -365,
   endDays = -1)
-
 databaseDetails <- createDatabaseDetails(
   connectionDetails = connectionDetails,
   cdmDatabaseSchema = "main",
@@ -71,7 +68,6 @@ databaseDetails <- createDatabaseDetails(
   outcomeIds = outcomeId,
   cdmVersion = 5  #?
 )
-
 restrictPlpDataSettings <- createRestrictPlpDataSettings()
 ```
 
@@ -88,7 +84,6 @@ populationSettings <- createStudyPopulationSettings(
   minTimeAtRisk = 364,
   requireTimeAtRisk = TRUE,
   includeAllOutcomes = TRUE)
-
 splitSettings <- createDefaultSplitSetting(
   trainFraction = 0.75,
   testFraction = 0.25,
@@ -96,7 +91,6 @@ splitSettings <- createDefaultSplitSetting(
   nfold = 2,
   splitSeed = 1234
 )
-
 sampleSettings <- createSampleSettings()
 featureEngineeringSettings <- createFeatureEngineeringSettings()
 preprocessSettings <- createPreprocessSettings(
@@ -104,10 +98,7 @@ preprocessSettings <- createPreprocessSettings(
   normalize = T,
   removeRedundancy = T
 )
-
-
 lrModel <- setLassoLogisticRegression()
-
 executeSettings = createExecuteSettings(
   runSplitData = T,
   runSampleData = T,
@@ -116,7 +107,6 @@ executeSettings = createExecuteSettings(
   runModelDevelopment = T,
   runCovariateSummary = T
 )
-
 ```
 Next we generate the internal data:
 ```{r generateInternal, message=FALSE, warning=FALSE, eval=TRUE, results='hide'}
@@ -158,7 +148,7 @@ The external node should receive now the estimation covariates.
 
 \newpage
 # External node
-The external nodes generate PLP data and prepares statistics for sharing with the internal one. For the sake of 
+The external nodes generate PLP data and prepares statistics for sharing with the internal one. For the sake of
 algorithm evaluation it also evaluate the model trained on the internal node.
 
 ## Generate PLP data and evaluate model
@@ -177,12 +167,10 @@ externalDatabaseDetails <- createDatabaseDetails(
   outcomeIds = outcomeId,
   cdmVersion = 5  #?
 )
-
 externalPlpData <- getPlpData(
   databaseDetails = externalDatabaseDetails,
   covariateSettings = covSettings,
   restrictPlpDataSettings = restrictPlpDataSettings)
-
 externalResults <- externalValidateDbPlp(  # TODO avoid duplicated generation of plpData?
   internalResults$model,
   validationDatabaseDetails = externalDatabaseDetails)
@@ -193,13 +181,11 @@ externalResults <- externalValidateDbPlp(  # TODO avoid duplicated generation of
 ```{r message=FALSE, warning=FALSE, eval=TRUE, results='hide'}
 externalXY <- plpDataAdapter::transformPlpDataToDataFrame(
   externalPlpData, populationSettings, outcomeId = outcomeId)
-
 ZExt <- computeTable1LikeTransformation(
-  externalXY[c(estimationCovariates, 'outcome')], 
-  outcomeBalance = T, 
+  externalXY[c(estimationCovariates, 'outcome')],
+  outcomeBalance = T,
   outcomeCol = 'outcome'
 )
-
 muExt <- colMeans(ZExt)
 ```
 These statistics are sent to the internal node.
@@ -214,21 +200,18 @@ First the data is adapted and transformed:
 # Transform internal plp data and align it with predictions
 internalXY <- plpDataAdapter::transformPlpDataToDataFrame(
   internalPlpData, populationSettings, outcomeId = outcomeId)
-
 allignedInternal <- plpDataAdapter::allignDataAndPrediction(
   internalXY, internalResults, subsets = 'Train')
-
 # Compute transformation on covariate outcome pairs
 ZInt <- computeTable1LikeTransformation(
-  allignedInternal$dataXY[c(estimationCovariates, 'outcome')], 
-  outcomeBalance = T, 
+  allignedInternal$dataXY[c(estimationCovariates, 'outcome')],
+  outcomeBalance = T,
   outcomeCol = 'outcome'
 )
-
 # Estimate external performance
 internalData <- list(
-  z=ZInt, 
-  p = allignedInternal$prediction$value, 
+  z=ZInt,
+  p = allignedInternal$prediction$value,
   y = allignedInternal$dataXY[['outcome']]
 )
 ```
@@ -248,12 +231,11 @@ externalEstimatorSettings <- createExternalEstimatorSettings(
   optimizationMethod = 'dual',  # dual, primal
   stratifiedSampling = T,
   nMaxReweight = 10000,
-  nRepetitions = 1,
+  nRepetitions = 100,
   maxProp = 500,
   outputDir = getwd(),
   maxCores = 1
   )
-
 estimatedResults <- estimateExternalPerformanceFromStatistics(
   internalData = internalData,
   externalStats = muExt,
@@ -264,25 +246,34 @@ estimatedResults <- estimateExternalPerformanceFromStatistics(
 # Compare evaluation and real results
 
 ```{r message=FALSE, warning=FALSE, eval=TRUE}
-  plpMetrics <- c(
-    'populationSize','outcomeCount','AUROC','95% lower AUROC','95% upper AUROC',
-    'brier score','calibrationInLarge mean prediction','calibrationInLarge observed risk'
-  )
-  intPerf <- internalResults$performanceEvaluation$evaluationStatistics
-  rows <- (intPerf['evaluation']=='Test') & (intPerf[['metric']] %in% plpMetrics)
-  cat('Internal performance:\n')
-  print(format(intPerf[rows, c('metric', 'value')], digits=3))
-  
-  extPerf <- externalResults[[2]]$performanceEvaluation$evaluationStatistics
-  rows <- (extPerf['evaluation']=='Validation') & (extPerf[['metric']] %in% plpMetrics)
-  cat('External performance:\n')
-  print(format(extPerf[rows, c('metric', 'value')], digits=3))
-  
-  cat('Estimated exteranl performance','\n')
-  print(estimatedResults$estimation)
+plpMetrics <- c(
+  'populationSize','outcomeCount','AUROC','95% lower AUROC','95% upper AUROC',
+  'brier score','calibrationInLarge mean prediction','calibrationInLarge observed risk'
+)
+intPerf <- internalResults$performanceEvaluation$evaluationStatistics
+rows <- (intPerf['evaluation']=='Test') & (intPerf[['metric']] %in% plpMetrics)
+cat('Internal performance:\n')
+print(format(intPerf[rows, c('metric', 'value')], digits=3))
+
+extPerf <- externalResults[[2]]$performanceEvaluation$evaluationStatistics
+rows <- (extPerf['evaluation']=='Validation') & (extPerf[['metric']] %in% plpMetrics)
+cat('External performance:\n')
+print(format(extPerf[rows, c('metric', 'value')], digits=3))
+
+cat('Estimated exteranl performance','\n')
+showResults <- c(
+  'n', 'n outcome', 'Max Weighted SMD',
+  'AUROC', '2.5 percentile AUROC', '97.5 percentile AUROC', 
+  'n repetitions',
+  'Brier score',
+  'Global calibration mean prediction',
+  'Global calibration observed risk')
+estimationView <- estimatedResults$estimation[showResults, , drop = F]
+estimationView[, 'value'] <- apply(estimationView, 1, function(x) {sprintf('%.3g', x)})
+print(estimationView)
 ```
 Here, `n` is the number of samples that recieved a weight greater than zero;
-`Max weight` is the maximal sample weight of the weight vector generated by the rewighing algorithm; 
-`chi2 to uniform` and `kl` are the chi squared and Kullback-Leibler divergences between the obtained 
+`Max weight` is the maximal sample weight of the weight vector generated by the rewighing algorithm;
+`chi2 to uniform` and `kl` are the chi squared and Kullback-Leibler divergences between the obtained
 weights and the uniform weights respectively; and `Max Weighted SMD` is the maximal weighted
 standard mean difference between covariates in the external sample and the reweighted sample.
