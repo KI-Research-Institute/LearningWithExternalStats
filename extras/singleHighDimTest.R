@@ -3,19 +3,21 @@ library(glue)
 library(glmnet)
 library(pROC)
 
+script_dir <- dirname(rstudioapi::getSourceEditorContext()$path)
+setwd(script_dir)
+
 source('./mlWrappers/wglmnet.R')
 source('./mlWrappers/wxgboost.R')
 source('./mlWrappers/wrappedml.R')
 source('./simulations/anchorModelSimulator.R')
 
 
-n = 3e5  # number of samples in train and tests sets
+n = 3e4  # number of samples in train and tests sets
 p = 500  # number of features
 binary = T # type of covariates
-ntop = 500  # number of features used in estimation of external performance
 
 # Simulation model
-outcomeOffset = -log(250)  # offset of the outcome logistic model, determines outcome prevalence
+outcomeOffset = -log(n/1000)  # offset of the outcome logistic model, determines outcome prevalence
 sigma_B_X_AH = 0  # degree of porximity assumption violation
 sigma_B_Y_X_factor = 4
 sigma_B_Y_XA_factor = 4
@@ -33,7 +35,7 @@ externalEstimatorSettings <-  createExternalEstimatorSettings(
     stratifiedSampling = T,
     nRepetitions = 10,
     maxProp = 100,
-    outputDir = outputDir,
+    outputDir = getwd(),
     maxCores = 3
   )
 
@@ -54,10 +56,10 @@ cat(glue("n outcome {sum(internalTest['Y'])}/{nrow(internalTest)}"),"\n")
 
 xFeatures <- colnames(d$internalTest)[1:(ncol(d$internalTest)-1)]
 cat('Generated simulated data, with the following means:\n')
-print(sort(colMeans(d$internalTest))[floor((0:10)/10*(testParams$p-1)+1)])
+print(sort(colMeans(d$internalTest))[floor((0:10)/10*(p-1)+1)])
 trainingStartTime <- Sys.time()
-cat('Training using ', testParams$trainer$name, '\n')
-model1 <- wfit(testParams$trainer, sapply(d$internalTrain[xFeatures], as.numeric), d$internalTrain[['Y']])
+cat('Training using ', trainer$name, '\n')
+model1 <- wfit(trainer, sapply(d$internalTrain[xFeatures], as.numeric), d$internalTrain[['Y']])
 trainingTime <- Sys.time() - trainingStartTime
 
 
@@ -65,13 +67,13 @@ vars1 <- wimportant(model1)
 cat('Number of selected variables' ,length(vars1), '\n')
 
 # Predict the label probabilities in the internal test set
-internalX <- sapply(d$internalTest[vars1], as.numeric)
+internalX <- sapply(d$internalTest[xFeatures], as.numeric)
 # pInternal <- predict(model1, internalX, type = "response", s = "lambda.1se")[,1]
 pInternal <- wpredict(model1, internalX)
 internalAUC <- auc(roc(d$internalTest[['Y']], pInternal, direction = "<", quiet = T))
 
 # External results
-xExternal <- sapply(d$externalTest[vars1], as.numeric)
+xExternal <- sapply(d$externalTest[xFeatures], as.numeric)
 # pExternal <- predict(model1, xExternal, type = "response", s = "lambda.1se")[,1]
 pExternal <- wpredict(model1, xExternal)
 extAuc <- auc(roc(d$externalTest[['Y']], pExternal, quiet = TRUE, direction='<'))
@@ -97,9 +99,30 @@ dTransformedInt <- computeTable1LikeTransformation(internalK, outcomeBalance=TRU
 dTransformedExt <- computeTable1LikeTransformation(externalK, outcomeBalance=TRUE)
 muExt <- colMeans(dTransformedExt)
 internalData <- list(z=dTransformedInt, p = pInternal, y = internalK[['Y']])
-estimationParams <- testParams$estimationParams[[i]]
 
 res <- estimateExternalPerformanceFromStatistics(
   internalData = internalData,
   externalStats = muExt,
-  externalEstimatorSettings = estimationParams)
+  externalEstimatorSettings = externalEstimatorSettings)
+
+cat('Training time:\n')
+print(trainingTime)
+print(internalAUC, digits=3)
+print(extAuc, digits=3)
+
+
+showResults <- c(
+  'n',
+  'n outcome',
+  'Max weight',
+  'chi2 to uniform',
+  'kl',
+  'Max Weighted SMD',
+  'AUROC', '2.5 percentile AUROC', '97.5 percentile AUROC',
+  'n repetitions',
+  'Brier score',
+  'Global calibration mean prediction',
+  'Global calibration observed risk')
+estimationView <- res$estimation[showResults, , drop = F]
+estimationView[, 'value'] <- apply(estimationView, 1, function(x) {sprintf('%.3g', x)})
+print(estimationView)

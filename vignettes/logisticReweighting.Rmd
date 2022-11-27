@@ -92,25 +92,24 @@ Now we are ready to estimate:
 ```{r, message=FALSE, warning=FALSE, eval=TRUE, results='hide'}
 internalData <- list(z=dTransformedInt, p = pInternal, y = d$internalTest[['Y']])
 
-estimatedResults <- estimateExternalPerformanceFromStatistics(
+estimatedLRResults <- estimateExternalPerformanceFromStatistics(
   internalData = internalData,
   externalStats = muExt,
   externalEstimatorSettings = externalEstimatorSettings
 )
-print(estimatedResults)
 ```
 and display results:
 ```{r, message=FALSE, warning=FALSE, eval=TRUE}
 showResults <- c(
-  'n', 'n outcome', 'Max Weighted SMD',
-  'AUROC', '2.5 percentile AUROC', '97.5 percentile AUROC', 
-  'n repetitions',
+  'n', 
+  'n outcome',
+  'AUROC',
   'Brier score',
   'Global calibration mean prediction',
   'Global calibration observed risk')
-estimationView <- estimatedResults$estimation[showResults, , drop = F]
-estimationView[, 'value'] <- apply(estimationView, 1, function(x) {sprintf('%.3g', x)})
-print(estimationView)
+estimationLRView <- estimatedLRResults$estimation[showResults, , drop = F]
+estimationLRView[, 'value'] <- apply(estimationLRView, 1, function(x) {sprintf('%.3g', x)})
+print(estimationLRView)
 ```
 
 The entropy is a measure of the distance between the original and

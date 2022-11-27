@@ -262,7 +262,12 @@ print(format(extPerf[rows, c('metric', 'value')], digits=3))
 
 cat('Estimated exteranl performance','\n')
 showResults <- c(
-  'n', 'n outcome', 'Max Weighted SMD',
+  'n', 
+  'n outcome',
+  'Max weight',
+  'chi2 to uniform',
+  'kl',
+  'Max Weighted SMD',
   'AUROC', '2.5 percentile AUROC', '97.5 percentile AUROC', 
   'n repetitions',
   'Brier score',
