@@ -16,13 +16,6 @@ editor_options:
     wrap: 72
 ---
 
-```{r, include = FALSE}
-knitr::opts_chunk$set(
-  collapse = TRUE,
-  comment = "#>"
-)
-```
-
 This example demonstrates re-weighting of a pre-trained logistic
 regression model to evalute external performence using an internal test
 set and statistics from the external set.
@@ -31,7 +24,7 @@ set and statistics from the external set.
 
 First we import the libraries
 
-```{r setup}
+```{r setup, message=FALSE, warning=FALSE, eval=TRUE, results='hide'}
 library(LearningWithExternalStats)
 library(glue)
 library(pROC)
@@ -40,7 +33,7 @@ library(glmnet)
 
 Next we load data and model objects:
 
-```{r}
+```{r, message=FALSE, warning=FALSE, eval=TRUE, results='hide'}
 d <- LearningWithExternalStats::anchorData1
 model1 <- LearningWithExternalStats::anchorLR1
 ```
@@ -49,7 +42,7 @@ model1 <- LearningWithExternalStats::anchorLR1
 
 Predict the label probabilities in the internal test set
 
-```{r}
+```{r, message=FALSE, warning=FALSE, eval=TRUE}
 xFeatures <- colnames(d$externalTest)[1:(ncol(d$externalTest)-1)]
 internalX <- sapply(d$internalTest[xFeatures], as.numeric)
 pInternal <- predict(model1, internalX, type = "response", s = "lambda.1se")[,1]
@@ -66,7 +59,7 @@ and variances of every feature in every label group. The features of the
 external set are averaged. The re-weighting algorithm will use the means
 of the external features and the entire internal features matrix.
 
-```{r}
+```{r, message=FALSE, warning=FALSE, eval=TRUE}
 dTransformedInt <- computeTable1LikeTransformation(d$internalTest, outcomeBalance=TRUE)
 dTransformedExt <- computeTable1LikeTransformation(d$externalTest, outcomeBalance=TRUE)
 muExt <- colMeans(dTransformedExt)
@@ -79,7 +72,7 @@ the tradeoff between matching accuracy and closeness to the uniform
 distribution. 'minW' is the minimum allowed weight. `optimizationMethod`
 can be `'dual'` or `'primal'`:
 
-```{r}
+```{r, message=FALSE, warning=FALSE, eval=TRUE, results='hide'}
 externalEstimatorSettings <- createExternalEstimatorSettings(
   divergence = 'entropy',  # entropy, chi2
   lambda = 1e-1,
@@ -96,7 +89,7 @@ externalEstimatorSettings <- createExternalEstimatorSettings(
 
 Now we are ready to estimate:
 
-```{r}
+```{r, message=FALSE, warning=FALSE, eval=TRUE, results='hide'}
 internalData <- list(z=dTransformedInt, p = pInternal, y = d$internalTest[['Y']])
 
 estimatedResults <- estimateExternalPerformanceFromStatistics(
@@ -106,8 +99,9 @@ estimatedResults <- estimateExternalPerformanceFromStatistics(
 )
 ```
 and display results:
-```{r}
-print(format(estimatedResults$estimation['AUROC', ], digits=3))
+```{r, message=FALSE, warning=FALSE, eval=TRUE}
+showResults <- rownames(estimatedResults$estimation) %in% c('AUROC', 'AUROC 0.025', 'AUROC 0.975' ,'n', 'n outcome', 'Brier score')
+print(format(estimatedResults$estimation[showResults, ], digits=3))
 ```
 
 The entropy is a measure of the distance between the original and
@@ -117,7 +111,7 @@ reweighted distributions.
 
 Compare to real performance in the test set
 
-```{r}
+```{r, message=FALSE, warning=FALSE, eval=TRUE}
 xExternal <- sapply(d$externalTest[xFeatures], as.numeric)
 pExternal <- predict(model1, xExternal, type = "response", s = "lambda.1se")[,1]
 extAuc <- auc(roc(d$externalTest[['Y']], pExternal, quiet = TRUE, direction='<'))

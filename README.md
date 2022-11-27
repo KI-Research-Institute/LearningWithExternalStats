@@ -9,3 +9,10 @@ that use [HADES patient level prediction](https://ohdsi.github.io/PatientLevelPr
 devtools::install_github("KI-Research-Institute/plpDataAdapter")
 devtools::install_github("KI-Research-Institute/LearningWithExternalStats")
 ```
+
+
+## Overview
+
+### Pre-diagnostics
+### Estimation
+### Post-diagnostics
