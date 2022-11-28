@@ -216,12 +216,27 @@ internalData <- list(
 )
 ```
 
-Before we estimate, we should define parameters of the reweighing algorithms. The
+Before we estimate, we should define parameters of the external estimation algorithms. 
+The first set of parameters determines the properties of the re-weighting algorithm. Specifically,
 `divergence` parameter defines the type of divergence between the
 weighted distribution and the uniform distribution. `lambda` controls
 the tradeoff between matching accuracy and closeness to the uniform
 distribution. `minW` is the minimum allowed weight. `optimizationMethod`
-can be `'dual'` or `'primal'`:
+can be `'dual'` or `'primal'`.
+
+The other set determines additional factors. 
+
+As the re-weighting algorithm
+can handle sets with size of up to a few 10,000 samples, good estimation can be obtained by sub-sampling.
+`nMaxReweight` determines that size of the subsamples. `stratifiedSampling` deals with rare outcomes and if set to
+`TRUE` the algorithm sub-samples the two classes independently. `nRepetitions` is the number of repetitions of running
+the reweighting algorithm. In case `nMaxReweight` is smaller than the sample size, subsampling is performed without
+replacement and the final estimation and confidence measures are obtained from the repetitions summary, 
+otherwise, the main estimates are obtained from the entire set and the confidence measures are obtained by 
+bootstrapping. `maxProp` is the maximum allowed proportion between internal and external frequencies of binary
+variables in cases that the difference between proportions is larger than 0.01. `outputDir` is the directory
+used for logging. `maxCores` are the maximum cores used in parallel for repeated sub-sampling. 
+
 
 ```{r message=FALSE, warning=FALSE, eval=TRUE, results='hide'}
 externalEstimatorSettings <- createExternalEstimatorSettings(
@@ -229,12 +244,12 @@ externalEstimatorSettings <- createExternalEstimatorSettings(
   lambda = 1e-1,
   minW = 0,
   optimizationMethod = 'dual',  # dual, primal
-  stratifiedSampling = T,
   nMaxReweight = 10000,
+  stratifiedSampling = T,
   nRepetitions = 100,
-  maxProp = 500,
+  maxProp = 100,
   outputDir = getwd(),
-  maxCores = 1
+  maxCores = 3
   )
 estimatedResults <- estimateExternalPerformanceFromStatistics(
   internalData = internalData,

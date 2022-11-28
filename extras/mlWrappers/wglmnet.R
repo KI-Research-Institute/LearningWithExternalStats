@@ -1,6 +1,6 @@
-wglmnet <- function(alpha=0.5, ntop=100) {
+wglmnet <- function(alpha=0.5, ntop=500) {
   param <- list(alpha=alpha, ntop=ntop)
-  
+
   result <- list(
     name ='glmnet',
     param = param,
@@ -34,7 +34,7 @@ wpredictGlmnet <- function(m, X) {
 
 wimportantGlmnet <- function(m) {
   # TODO - add additional info if exists
-  beta <- coef(m$model, s = "lambda.min")  
+  beta <- coef(m$model, s = "lambda.min")
   betaDf <- data.frame(name = beta@Dimnames[[1]][beta@i + 1], coefficient = beta@x)
   nr <- nrow(betaDf)
   ntop <- min(m$param$ntop, nr-1)
@@ -45,7 +45,7 @@ wimportantGlmnet <- function(m) {
 
 
 wprintGlmnet <- function(m) {
-  beta <- coef(m$model, s = "lambda.min")  
+  beta <- coef(m$model, s = "lambda.min")
   betaDf <- data.frame(name = beta@Dimnames[[1]][beta@i + 1], coefficient = beta@x)
   cat('GLMnet coefficients:\n')
   print(betaDf)
