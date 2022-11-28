@@ -205,7 +205,7 @@ First the data is adapted and transformed:
 internalXY <- plpDataAdapter::transformPlpDataToDataFrame(
   internalPlpData, populationSettings, outcomeId = outcomeId)
 allignedInternal <- plpDataAdapter::allignDataAndPrediction(
-  internalXY, internalResults, subsets = 'Train')
+  internalXY, internalResults, subsets = 'Test')
 # Compute transformation on covariate outcome pairs
 ZInt <- computeTable1LikeTransformation(
   allignedInternal$dataXY[c(estimationCovariates, 'outcome')],
