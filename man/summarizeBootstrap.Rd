@@ -4,13 +4,11 @@
 \alias{summarizeBootstrap}
 \title{Summarize bootstrap}
 \usage{
-summarizeBootstrap(b, probs = c(0.025, 0.5, 0.975))
+summarizeBootstrap(b)
 }
 \arguments{
 \item{b}{bootstrap results matrix columns correspond to different metrix, rows to repetitions. Columns
 should be named by the metric.}
-
-\item{probs}{quatile probabilities}
 }
 \value{
 a named list with bootstrap statistics for every metric

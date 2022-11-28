@@ -1,6 +1,7 @@
 #' @importFrom stats sd quantile
 #' @importFrom pROC auc roc
 #' @importFrom WeightedROC WeightedAUC WeightedROC
+#' @import ParallelLogger
 NULL
 
 
@@ -94,6 +95,7 @@ createExternalEstimatorSettings <- function(
 #'
 #' Reweighing algorithm parameters:
 #' @param externalEstimatorSettings an object of class \code{externalEstimatorSettings}
+#' @param createEstimationLogger create a logger in outputDirectory
 #'
 #' @return an object of \code{estimatedExternalPerformanceFromStatistics} with the following fields:
 #'
@@ -162,8 +164,6 @@ estimateExternalPerformanceFromStatistics <- function(
       idxs <- splitToRandomSubsets(n, externalEstimatorSettings$nMaxReweight, nSubsets)
   } else
     idxs <- getBootstrapSubsets(n, externalEstimatorSettings$nMaxReweight, nSubsets)
-  idxsLengths <- lapply(idxs, length)
-  cat('Subsetes lengths', unlist(idxsLengths), '\n')
 
   # Estimation
   estimationStartTime <- Sys.time()
@@ -333,6 +333,8 @@ estimateFullSetPerformance <- function(internalData, externalStats, estimationPa
 #' @param z a data frame of transformed feature-outcome pairs
 #' @param mu a vector of means of transformed feature-outcome pairs
 #' @param maxProp maximum proportion between internal and external means to determine imbalance
+#' @param maxDiff maximum difference from which to check max prop
+#' @param npMinRatio minimum retio between number of features and number of examples
 #'
 #' @return a named list with the following fields:
 #' ...
@@ -377,7 +379,7 @@ preDiagnostics <- function(z, mu, maxProp, maxDiff, npMinRatio = 4) {
   fewSamples = sum(binaryResults$zidx)/length(representedFeatures) < npMinRatio
   if (fewSamples) {
     cat('Few samples\n')
-    ParallelLoger::logError(glue("Few samples n={sum(binaryResults$zidx)}, p={length(representedFeatures)}"))
+    ParallelLogger::logError(glue("Few samples n={sum(binaryResults$zidx)}, p={length(representedFeatures)}"))
   }
 
   status = 'Success'
@@ -431,6 +433,12 @@ preCheckBinaryFeatures <- function(z, mu, includeFeatures, maxProp, maxDiff) {
 #'
 #' Assuming that if the max proportion is violated than the expectations may be small and therefore checking also
 #' maxDiff
+#'
+#' @param mu expectations
+#' @param z data
+#' @param maxProp max proportion
+#' @param maxDiff max difference from with to check max proportion
+#'
 getHighlySkewedBinaryFeatures <- function(mu, z, maxProp, maxDiff) {
   ParallelLogger::logInfo(glue("Checking skewness with max proportion = {maxProp}, conditional max diff {maxDiff}"))
   imbalanced <- rep(F, length(mu))
@@ -506,23 +514,25 @@ preCheckUnaryFeatures <- function(z, mu, results, maxUnaryDiff) {
 #'
 #' @param b bootstrap results matrix columns correspond to different metrix, rows to repetitions. Columns
 #' should be named by the metric.
-#' @param probs quatile probabilities
 #'
 #' @return a named list with bootstrap statistics for every metric
 #'
-summarizeBootstrap <- function(b, probs=c(0.025, 0.5, 0.975)) {
+summarizeBootstrap <- function(b) {
+  probs <- c(0.025, 0.5, 0.975)
   nboot <- nrow(b)
   s <- list()
   for (measure in colnames(b)) {
     r <- b[,measure]  # TODO learn how to extract vectors from matrices
     resultsQuantiles <- quantile(r, probs = probs, na.rm = TRUE)
-    for (i in 1:length(probs))
-      s[[paste(as.character(round(probs[i]*100, digits=1)), 'percentile', measure)]] = resultsQuantiles[[i]]
+    # for (i in 1:length(probs))
+    s[[paste('Rough 95% lower', measure)]] = resultsQuantiles[[1]]
+    s[[paste('Median', measure)]] = resultsQuantiles[[2]]
+    s[[paste('Rough 95% upper', measure)]] = resultsQuantiles[[3]]
 
     s[[paste(measure, 'mean')]] = mean(r, na.rm = TRUE)
     s[[paste(measure, 'sd')]] = sd(r, na.rm = TRUE)
-    s[[paste(measure, 'repetitions')]] = nboot - sum(is.na(r))
   }
+  s[['n repetitions']] = nboot - sum(is.na(r))
   return(s)
 }
 

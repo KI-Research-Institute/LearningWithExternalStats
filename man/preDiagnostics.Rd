@@ -12,6 +12,10 @@ preDiagnostics(z, mu, maxProp, maxDiff, npMinRatio = 4)
 \item{mu}{a vector of means of transformed feature-outcome pairs}
 
 \item{maxProp}{maximum proportion between internal and external means to determine imbalance}
+
+\item{maxDiff}{maximum difference from which to check max prop}
+
+\item{npMinRatio}{minimum retio between number of features and number of examples}
 }
 \value{
 a named list with the following fields:

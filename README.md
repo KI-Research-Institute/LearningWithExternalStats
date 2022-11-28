@@ -15,7 +15,7 @@ devtools::install_github("KI-Research-Institute/LearningWithExternalStats")
 
 This package estimates the performance of a predictive model of an external data-set when there is only access to
 limited statistics in the external set and to detailed samples in the internal one. The main function works in
-three stages:
+four stages:
 
 ### Pre-weighting diagnostics
 This stage tests the feasibility of re-weighting the internal set to achieve external statistics. 
@@ -24,7 +24,7 @@ This stage tests the feasibility of re-weighting the internal set to achieve ext
 This stage re-weights the internal data such that the weighted set has similar statistics to the external ones.
 The internal re-weighting algorithm can handle up to a few 10,000's samples and up to 500 features.
 In case the number of samples is large, the users can determine a maximum number of samples and the evaluation
-algorithm will invoke internal re-weighting using sub-samples of this size (in this case we recommend 5000-10,000).
+algorithm will invoke internal re-weighting using sub-samples of this size (in this case we recommend 5,000-10,000).
 
 ### Post-weighting diagnostics
 If the re-weighting algorithm finds a vector of weights that satisfies the task's constraints, the evaluation module

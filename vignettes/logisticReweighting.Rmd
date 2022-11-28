@@ -80,7 +80,7 @@ externalEstimatorSettings <- createExternalEstimatorSettings(
   optimizationMethod = 'dual',  # dual, primal
   stratifiedSampling = T,
   nMaxReweight = 10000,
-  nRepetitions = 100,
+  nRepetitions = 40,
   maxProp = 500,
   outputDir = getwd(),
   maxCores = 3

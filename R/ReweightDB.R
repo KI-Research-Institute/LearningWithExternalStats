@@ -105,20 +105,20 @@ reweightByMeans <- function(
 primalReweightByMeans <- function(Z, mu, divergence,lambda, minSd, minW, distance, solver, verbose) {
   normalized <- normalizeDataAndExpectations(Z, mu, minSd)
   n <- nrow(normalized$Z)
-  w <- Variable(n, 1)
+  w <- CVXR::Variable(n, 1)
 
   normalized$mu <- as.vector(normalized$mu)
   normalized$Z <- as.matrix(normalized$Z)
 
   if (divergence == 'entropy')    fDivergence <- -mean(entr(w))
-  else if (divergence == 'chi2')  fDivergence <- norm2(w-(1/n)) ** 2
+  else if (divergence == 'chi2')  fDivergence <- CVXR::norm2(w-(1/n)) ** 2
   else {
     ParallelLogger::logError(glue("unsuported divergence type {divergence}"))
     return(rep(NaN, n))
   }
 
-  if (distance == 'l2')       expectationsDistance <- norm2(t(normalized$Z) %*% w - normalized$mu)
-  else if (distance == 'l1')  expectationsDistance <- norm1(t(normalized$Z) %*% w - normalized$mu)
+  if (distance == 'l2')       expectationsDistance <- CVXR::norm2(t(normalized$Z) %*% w - normalized$mu)
+  else if (distance == 'l1')  expectationsDistance <- CVXR::norm1(t(normalized$Z) %*% w - normalized$mu)
   else {
     ParallelLogger::logError(glue("unsuported distance type {distance}"))
     return(rep(NaN, n))
@@ -126,11 +126,11 @@ primalReweightByMeans <- function(Z, mu, divergence,lambda, minSd, minW, distanc
 
   if (lambda > 0) {
     if (verbose) cat(glue('Reweighting using {divergence}, {distance}, lambda = {lambda}, minW = {minW}'), '\n')
-    objective <- Minimize(expectationsDistance + lambda*fDivergence)
+    objective <- CVXR::Minimize(expectationsDistance + lambda*fDivergence)
     constr <- list(w >= minW, sum(w) == 1)
   } else {
     if (verbose) cat(glue('Reweighting using {divergence}, hard expectation constraints, minW = {minW}'), '\n')
-    objective <- Minimize(fDivergence)
+    objective <- CVXR::Minimize(fDivergence)
     constr <- list(w >= minW, sum(w) == 1, (t(normalized$Z) %*% w) == normalized$mu)
   }
   problem <- Problem(objective, constraints = constr)
@@ -175,14 +175,14 @@ dualReweightByMeans <- function(Z, mu, lambda, minSd, minW, solver, verbose) {
   m <- ncol(normalized$Z)
   n <- nrow(normalized$Z)
 
-  nu <- Variable(m+1)
+  nu <- CVXR::Variable(m+1)
   C <- rbind(t(normalized$Z), matrix(1,1,n))
   d <- c(normalized$mu, 1)
-  objective <- Minimize(t(d) %*% nu + exp(-1) * sum_entries(exp(- t(C) %*% nu)))
+  objective <- CVXR::Minimize(t(d) %*% nu + exp(-1) * sum_entries(exp(- t(C) %*% nu)))
   if (lambda==0)
     problem <- Problem(objective)
   else {
-    constr <- list(norm2(nu[1:m]) <= (1/lambda))
+    constr <- list(CVXR::norm2(nu[1:m]) <= (1/lambda))
     problem <- Problem(objective, constraints = constr)
   }
   result <- solve(problem, solver=solver)
@@ -261,7 +261,7 @@ computeTable1LikeTransformation <- function(X, outcomeBalance, outcomeCol='Y') {
     sNew <- paste(s, '_Table1T_squared', sep='')
     X[[sNew]] <- (X[[s]]**2)
   }
-  # Convert binary variables to numeric 0-1
+  # Convert binary CVXR::Variables to numeric 0-1
   is_factor <- sapply(X, is.factor)
   X[is_factor] <- sapply(X[is_factor], as.numeric)
   X[is_factor] <- X[is_factor] - 1

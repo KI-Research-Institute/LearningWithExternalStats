@@ -31,7 +31,11 @@ library(FeatureExtraction)  # v3.2.0
 library(PatientLevelPrediction)  # v6.0.4
 library(glue)
 library(plpDataAdapter)
-library(LearningWithExternalStats)
+suppressPackageStartupMessages(library(LearningWithExternalStats))
+# TODO: currently loading this library with the former ones creates the following:
+# Found more than one class "atomicVector" in cache; using the first, from namespace 'Matrix'
+# Also defined by 'Rmpfr'
+
 # Activate Eunomia demo database
 connectionDetails <- Eunomia::getEunomiaConnectionDetails()
 Eunomia::createCohorts(connectionDetails)
@@ -58,22 +62,22 @@ databaseDetails <- createDatabaseDetails(
   connectionDetails = connectionDetails,
   cdmDatabaseSchema = "main",
   cdmDatabaseName = '',
-  cdmDatabaseId = '',  # ?
-  tempEmulationSchema = NULL,  # is this important to avoid further errors in getPlpData?
+  cdmDatabaseId = '', 
+  tempEmulationSchema = NULL,
   cohortDatabaseSchema = "main",
   cohortTable = "cohort",
   targetId = internalTargetId,
   outcomeDatabaseSchema = "main",
   outcomeTable = "cohort",
   outcomeIds = outcomeId,
-  cdmVersion = 5  #?
+  cdmVersion = 5
 )
 restrictPlpDataSettings <- createRestrictPlpDataSettings()
 ```
 
 # Internal node: model training and sharing active model covariates
 We begin by defining prediction model settings:
-```{r modelSettings, message=FALSE, warning=FALSE, eval=TRUE}
+```{r modelSettings, message=FALSE, warning=FALSE, eval=TRUE, results='hide'}
 populationSettings <- createStudyPopulationSettings(
   washoutPeriod = 364,
   firstExposureOnly = FALSE,
@@ -157,21 +161,21 @@ externalDatabaseDetails <- createDatabaseDetails(
   connectionDetails = connectionDetails,
   cdmDatabaseSchema = "main",
   cdmDatabaseName = '',
-  cdmDatabaseId = '',  # ?
-  tempEmulationSchema = NULL,  # is this important to avoid further errors in getPlpData?
+  cdmDatabaseId = '',
+  tempEmulationSchema = NULL,
   cohortDatabaseSchema = "main",
   cohortTable = "cohort",
   targetId = externalTargetId,
   outcomeDatabaseSchema = "main",
   outcomeTable = "cohort",
   outcomeIds = outcomeId,
-  cdmVersion = 5  #?
+  cdmVersion = 5
 )
 externalPlpData <- getPlpData(
   databaseDetails = externalDatabaseDetails,
   covariateSettings = covSettings,
   restrictPlpDataSettings = restrictPlpDataSettings)
-externalResults <- externalValidateDbPlp(  # TODO avoid duplicated generation of plpData?
+externalResults <- externalValidateDbPlp(  # TODO avoid duplicated generation of plpData
   internalResults$model,
   validationDatabaseDetails = externalDatabaseDetails)
 ```
@@ -246,7 +250,7 @@ externalEstimatorSettings <- createExternalEstimatorSettings(
   optimizationMethod = 'dual',  # dual, primal
   nMaxReweight = 10000,
   stratifiedSampling = T,
-  nRepetitions = 100,
+  nRepetitions = 10,
   maxProp = 100,
   outputDir = getwd(),
   maxCores = 3
@@ -283,13 +287,17 @@ showResults <- c(
   'chi2 to uniform',
   'kl',
   'Max Weighted SMD',
-  'AUROC', '2.5 percentile AUROC', '97.5 percentile AUROC', 
+  'AUROC', 
+  'Rough 95% lower AUROC', 
+  'Rough 95% upper AUROC', 
   'n repetitions',
   'Brier score',
   'Global calibration mean prediction',
   'Global calibration observed risk')
 estimationView <- estimatedResults$estimation[showResults, , drop = F]
+# Format the output:
 estimationView[, 'value'] <- apply(estimationView, 1, function(x) {sprintf('%.3g', x)})
+estimationView['n', 'value'] <- estimatedResults$estimation['n', 'value'] 
 print(estimationView)
 ```
 Here, `n` is the number of samples that recieved a weight greater than zero;
