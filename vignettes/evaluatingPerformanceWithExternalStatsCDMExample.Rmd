@@ -248,7 +248,7 @@ externalEstimatorSettings <- createExternalEstimatorSettings(
   lambda = 1e-1,
   minW = 0,
   optimizationMethod = 'dual',  # dual, primal
-  nMaxReweight = 10000,
+  nMaxReweight = 5000,
   stratifiedSampling = T,
   nRepetitions = 5,
   maxProp = 100,
