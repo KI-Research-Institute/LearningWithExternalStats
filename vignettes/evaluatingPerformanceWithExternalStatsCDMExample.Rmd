@@ -26,12 +26,12 @@ of the internal and external nodes.
 The following definitions set the ground to working with `Eunomia` simulated data set:
 
 ```{r setup, message=FALSE, warning=FALSE, eval=TRUE, results='hide'}
-library(Eunomia)  # v1.0.2
-library(FeatureExtraction)  # v3.2.0
-library(PatientLevelPrediction)  # v6.0.4
 library(glue)
 library(plpDataAdapter)
 library(LearningWithExternalStats)
+library(Eunomia)  # v1.0.2
+library(FeatureExtraction)  # v3.2.0
+library(PatientLevelPrediction)  # v6.0.4
 
 # Activate Eunomia demo database
 connectionDetails <- Eunomia::getEunomiaConnectionDetails()
@@ -114,10 +114,10 @@ Next we generate the internal data:
 # TODO: currently CVXR used by LearningWithExternalStats causes:
 # Found more than one class "atomicVector" in cache; using the first, from namespace 'Matrix'
 # Also defined by 'Rmpfr'
-internalPlpData <- suppressMessages(getPlpData(
+internalPlpData <- getPlpData(
     databaseDetails = databaseDetails,
     covariateSettings = covSettings,
-    restrictPlpDataSettings = restrictPlpDataSettings))
+    restrictPlpDataSettings = restrictPlpDataSettings)
 ```
 
 We train the model and extract its active covariates:

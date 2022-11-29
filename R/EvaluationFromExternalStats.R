@@ -7,9 +7,6 @@ NULL
 
 #' evaluation from external stats
 
-# TODO - replace or requires installation of ParallelLoger?
-
-
 #' @title Create settings for \code{estimateExternalPerformanceFromStatistics}
 #'
 #' @param divergence 'entropy' or 'chi2'.
@@ -149,12 +146,12 @@ estimateExternalPerformanceFromStatistics <- function(
     result$status <- 'Failure'
     return(result)
   }
+  # Maintain features and samples according to pre-diagnostic evaluations
   externalStats <- externalStats[preD$representedFeatures]  # Features with non-Na entries
   internalData$z <- internalData$z[preD$zidx, preD$representedFeatures]
   internalData$y <- internalData$y[preD$zidx]
   internalData$p <- internalData$p[preD$zidx]
-
-  # TODO unify with bootstrap
+  # Generate indices of sub-samples
   n <- sum(preD$zidx)
   nSubsets <- externalEstimatorSettings$nRepetitions
   if (externalEstimatorSettings$nMaxReweight < n*0.99)  { # TODO figure this out
@@ -176,6 +173,7 @@ estimateExternalPerformanceFromStatistics <- function(
     internalData=internalData, externalStats = externalStats, estimationParams=externalEstimatorSettings)
   stopCluster(cl)
 
+  # Aggregate results into a matrix
   r1 <- resultsList[[1]]
   resultsMatrix <- matrix(nrow = nSubsets, ncol = length(r1), dimnames = list(NULL,names(r1)))
   for (k in 1:nSubsets) {
@@ -191,6 +189,8 @@ estimateExternalPerformanceFromStatistics <- function(
     result$status = 'Failure'
   }
   s <- summarizeBootstrap(resultsMatrix)
+
+  # Process post diagnostic information
   # TODO add a post diagnostic that measures 'effective sample size'
   maxWSMD <- meanResults['Max Weighted SMD']
   if (is.null(maxWSMD) || is.na(maxWSMD) || maxWSMD > externalEstimatorSettings$maxWSMD) {
