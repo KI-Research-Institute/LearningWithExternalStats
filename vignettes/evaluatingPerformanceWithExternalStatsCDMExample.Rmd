@@ -250,10 +250,10 @@ externalEstimatorSettings <- createExternalEstimatorSettings(
   optimizationMethod = 'dual',  # dual, primal
   nMaxReweight = 10000,
   stratifiedSampling = T,
-  nRepetitions = 10,
+  nRepetitions = 5,
   maxProp = 100,
   outputDir = getwd(),
-  maxCores = 3
+  maxCores = 5
   )
 estimatedResults <- estimateExternalPerformanceFromStatistics(
   internalData = internalData,
