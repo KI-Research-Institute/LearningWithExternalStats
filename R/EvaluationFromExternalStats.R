@@ -154,7 +154,7 @@ estimateExternalPerformanceFromStatistics <- function(
   # Generate indices of sub-samples
   n <- sum(preD$zidx)
   nSubsets <- externalEstimatorSettings$nRepetitions
-  if (externalEstimatorSettings$nMaxReweight < n*0.99)  { # TODO figure this out
+  if (externalEstimatorSettings$nMaxReweight < n*0.75)  { # TODO figure this out
     if (externalEstimatorSettings$stratified)
       idxs <- stratifiedSplitToRandomSubsets(n, externalEstimatorSettings$nMaxReweight, internalData$y, nSubsets)
     else
@@ -334,7 +334,7 @@ estimateFullSetPerformance <- function(internalData, externalStats, estimationPa
 #' @param mu a vector of means of transformed feature-outcome pairs
 #' @param maxProp maximum proportion between internal and external means to determine imbalance
 #' @param maxDiff maximum difference from which to check max prop
-#' @param npMinRatio minimum retio between number of features and number of examples
+#' @param npMinRatio minimum ratio between number of features and number of examples
 #'
 #' @return a named list with the following fields:
 #' ...
@@ -553,7 +553,7 @@ summarizeBootstrap <- function(b) {
 #'
 postDiagnostics <- function(w, z, mu) {
   n <- length(w)
-  p <- w/length(w)
+  p <- w/sum(w)
   klIdx <- p>0
   kl <- log(n) + as.numeric(t(p[klIdx]) %*% log(p[klIdx]))
   chi2ToUnif <- n*sum((p-1/n)**2)  #  = \sum(p-1/n)^2/1/n
