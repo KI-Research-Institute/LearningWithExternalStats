@@ -531,8 +531,8 @@ summarizeBootstrap <- function(b) {
 
     s[[paste(measure, 'mean')]] = mean(r, na.rm = TRUE)
     s[[paste(measure, 'sd')]] = sd(r, na.rm = TRUE)
+    s[['n repetitions']] = nboot - sum(is.na(r))
   }
-  s[['n repetitions']] = nboot - sum(is.na(r))
   return(s)
 }
 

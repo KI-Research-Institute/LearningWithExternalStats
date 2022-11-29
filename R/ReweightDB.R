@@ -61,11 +61,10 @@ reweightByMeans <- function(
 
   min_w <- min(w_hat)
   mean_w <- mean(w_hat)
-  if (verbose)
-    cat(sprintf('mean(w) = %.2f (sd = %.2f, min = %.2g, max = %.2g)\n',
-                mean_w, sd(w_hat), min_w, max(w_hat)))
+  w_summary <- sprintf('mean(w) = %.2f (sd = %.2f, min = %.2g, max = %.2g)', mean_w, sd(w_hat), min_w, max(w_hat))
+  ParallelLogger::logInfo(w_summary)
   if ((!is.na(min_w)) & (min_w < 0)) {
-    warning("Trimming negative weights to zero")
+    ParallelLogger::logWarn("Trimming negative weights to zero")
     n <- nrow(Z)
     w_hat[w_hat<0] <- minW/n
   }
@@ -224,9 +223,8 @@ normalizeDataAndExpectations <- function(Z, mu, minSd) {
   sdZ <- apply(Z, 2, sd)
   useCols <- sdZ>minSd # remove columns with low variance
   if (sum(!useCols) > 0) {
-    message(
+    ParallelLogger::logInfo(
       sprintf("Removing %d columns with low variance (<%.2g). Please examing this columns.", sum(!useCols), minSd))
-    # print(sdX[!useCols])
     Z <- Z[,names(Z)[useCols]]  # remove low variance columns todo: flag a positivity issue
     sdZ <- sdZ[useCols]
     muZ <- muZ[useCols]

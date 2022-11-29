@@ -9,10 +9,10 @@ source('./efesSimulationTests.R')
 source('./plotEfesSimulationResults.R')
 
 # Set output dir
-outputDir = 'C:\\localdev\\projects\\robustness\\high-dim'  # getwd(), 'D:\\projects\\robustness\\high-dim'
+outputDir = 'D:/projects/robustness/high-dim'  # getwd()
 
 testParams <- getDefaultEfesTestParams(outputDir = outputDir)
-bigTest <- F
+bigTest <- T
 bigTest2 <- F
 testParams$sigma_B_Y_XA_factor <- 3
 for (sigma_B_X_AH in c(0, 0.5)) {  # Degree of proximity assumption violation
@@ -36,8 +36,6 @@ for (sigma_B_X_AH in c(0, 0.5)) {  # Degree of proximity assumption violation
     testParams$estimationParams[[1]]$nMaxReweight <- 1000
     testParams$estimationParams[[2]]$nMaxReweight <- 1000
     testParams$estimationParams[[2]]$nRepetitions <- 5  # number of estimation repetitions
-    testParams$estimationParams[[1]]$maxCores <- 3
-    testParams$estimationParams[[2]]$maxCores <- 3
   }
   print(testParams)
   res <- repeatedTests(testParams)
