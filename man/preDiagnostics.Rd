@@ -15,7 +15,7 @@ preDiagnostics(z, mu, maxProp, maxDiff, npMinRatio = 4)
 
 \item{maxDiff}{maximum difference from which to check max prop}
 
-\item{npMinRatio}{minimum retio between number of features and number of examples}
+\item{npMinRatio}{minimum ratio between number of features and number of examples}
 }
 \value{
 a named list with the following fields:
