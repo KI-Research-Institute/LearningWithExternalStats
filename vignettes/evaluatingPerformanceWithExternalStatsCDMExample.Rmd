@@ -237,9 +237,16 @@ can handle sets with size of up to a few 10,000 samples, good estimation can be 
 the reweighting algorithm. In case `nMaxReweight` is smaller than the sample size, subsampling is performed without
 replacement and the final estimation and confidence measures are obtained from the repetitions summary, 
 otherwise, the main estimates are obtained from the entire set and the confidence measures are obtained by 
-bootstrapping. `maxProp` is the maximum allowed proportion between internal and external frequencies of binary
-variables in cases that the difference between proportions is larger than 0.01. `outputDir` is the directory
-used for logging. `maxCores` are the maximum cores used in parallel for repeated sub-sampling. 
+bootstrapping. 
+
+Additional parameters determine the behavior with respect to pre- and post-reweighting diagnostics.  
+`maxProp` is the maximum allowed proportion between internal and external frequencies of binary
+variables in cases that the difference between proportions is larger than 0.01. 
+`maxWSMD` is the maximum weighted *standardized mean difference* (SMD) considered small enough. 
+When the estimated weights result in larger SMD, the return status will indicate 'Large-WSMD' instead of 'Success',
+flagging that estimated results should be taken with caution.
+Finally, `outputDir` is the directory
+used for logging and `maxCores` are the maximum cores used in parallel for repeated sub-sampling. 
 
 
 ```{r message=FALSE, warning=FALSE, eval=TRUE, results='hide'}
@@ -252,6 +259,7 @@ externalEstimatorSettings <- createExternalEstimatorSettings(
   stratifiedSampling = T,
   nRepetitions = 5,
   maxProp = 100,
+  maxWSMD = 0.2,
   outputDir = getwd(),
   maxCores = 5
   )
@@ -279,6 +287,7 @@ rows <- (extPerf['evaluation']=='Validation') & (extPerf[['metric']] %in% plpMet
 cat('External performance:\n')
 print(format(extPerf[rows, c('metric', 'value')], digits=3))
 
+cat('External estimation status =', estimatedResults$status, '\n')
 cat('Estimated exteranl performance','\n')
 showResults <- c(
   'n', 

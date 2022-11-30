@@ -133,8 +133,9 @@ testSimulatedData <- function(testParams, testNum) {
 
   for (i in 1:length(testParams$estimationParams)) {
     estResults <- estimatePerformance(testParams, i, d, pInternal, vars1)
-    if (estResults$status == 'Success') {
-      results[glue('Est. Ext. AUC {i}')] <- estResults$estimation['AUROC', 'value']
+    # if (estResults$status == 'Success') {
+    if (!is.null(estResults$estimation)) {
+        results[glue('Est. Ext. AUC {i}')] <- estResults$estimation['AUROC', 'value']
       results[glue('Estimation Time {i}')] <- estResults$estimationTime
       for (metric in c('Max Weighted SMD', 'chi2 to uniform', 'kl'))
         results[glue('{metric} {i}')] <- estResults$estimation[metric, 'value']

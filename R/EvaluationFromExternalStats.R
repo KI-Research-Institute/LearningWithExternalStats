@@ -172,40 +172,79 @@ estimateExternalPerformanceFromStatistics <- function(
     cl, idxs, estimateSubsetPerformence,
     internalData=internalData, externalStats = externalStats, estimationParams=externalEstimatorSettings)
   stopCluster(cl)
-
-  # Aggregate results into a matrix
-  r1 <- resultsList[[1]]
-  resultsMatrix <- matrix(nrow = nSubsets, ncol = length(r1), dimnames = list(NULL,names(r1)))
-  for (k in 1:nSubsets) {
-    if (!is.null(resultsList[[k]]))
-      resultsMatrix[k ,] <- resultsList[[k]]
-  }
   result$estimationTime <- Sys.time() - estimationStartTime
+
+  resultsMatrix <- transformResultListToMatrix(resultsList)
+  if (is.null(resultsMatrix)) {
+    ParallelLogger::logError('All results are NULL')
+    result$status <- 'Failure'
+    return(result)
+  }
+
   if (externalEstimatorSettings$nMaxReweight >= n)
     meanResults <- estimateFullSetPerformance(internalData, externalStats, externalEstimatorSettings)
-  else
+  else {
     meanResults <- colMeans(resultsMatrix, na.rm = T)
+  }
   if (is.null(meanResults)) {
     result$status = 'Failure'
+    return(result)
   }
   s <- summarizeBootstrap(resultsMatrix)
 
   # Process post diagnostic information
   # TODO add a post diagnostic that measures 'effective sample size'
-  maxWSMD <- meanResults['Max Weighted SMD']
-  if (is.null(maxWSMD) || is.na(maxWSMD) || maxWSMD > externalEstimatorSettings$maxWSMD) {
-    ParallelLogger::logError(glue('Max weighted SMD = {maxWSMD} (Th={externalEstimatorSettings$maxWSMD})'))  # TODO which feature?
-    result$status = 'Failure-large-WSMD'
-  }
-  else {
-    wsmdWarnTh <- 0.05
-    if (maxWSMD > wsmdWarnTh)
-      ParallelLogger::logWarn(glue('Max weighted SMD > {wsmdWarnTh}'))  # TODO which feature?
-    result$status = 'Success'
-  }
-  allResults <- unlist(c(list(as.list(meanResults), as.list(s))))
-  result$estimation = data.frame(value=allResults)
+  result$status <- checkWsmdStatus(resultsMatrix, meanResults, externalEstimatorSettings)
+  result$estimation = data.frame(value=unlist(c(list(as.list(meanResults), as.list(s)))))
   return(result)
+}
+
+
+transformResultListToMatrix <- function(resultsList) {
+  resultsNames <- NULL
+  nResults <- 0
+  nSubsets <- length(resultsList)
+  for (k in 1:nSubsets) {
+    if (!is.null(resultsList[[k]])) {
+      resultsNames <- names(resultsList[[k]])
+      nResults <- nResults + 1
+    }
+  }
+  if (nResults == 0) {
+    return(NULL)
+  }
+  resultsMatrix <- matrix(nrow = nResults, ncol = length(resultsNames), dimnames = list(NULL, resultsNames))
+  iResult <- 0
+  for (k in 1:nSubsets) {
+    if (!is.null(resultsList[[k]])) {
+      iResult = iResult + 1
+      resultsMatrix[iResult ,] <- resultsList[[k]]
+    }
+  }
+  return(resultsMatrix)
+}
+
+
+checkWsmdStatus <- function(resultsMatrix, meanResults, externalEstimatorSettings) {
+  maxWSMD <- meanResults['Max Weighted SMD']
+  if (is.null(maxWSMD) || is.na(maxWSMD)) {
+    ParallelLogger::logError('Max weighted SMD is NULL or Na')
+    status = 'NULL-WSMD'
+  } else {
+    for (i in 1:nrow(resultsMatrix))
+      ParallelLogger::logInfo(glue("Max weighted SMD {i} {resultsMatrix[i, 'Max Weighted SMD']}"))
+    if (maxWSMD > externalEstimatorSettings$maxWSMD) {
+      ParallelLogger::logError(glue('Max weighted SMD = {maxWSMD} (Th={externalEstimatorSettings$maxWSMD})'))
+      status = 'Large-WSMD'
+    }
+    else {
+      wsmdWarnTh <- 0.05
+      if (maxWSMD > wsmdWarnTh)
+        ParallelLogger::logWarn(glue('Max weighted SMD = {maxWSMD} > {wsmdWarnTh}'))  # TODO which feature?
+      status = 'Success'
+    }
+  }
+  return(status)
 }
 
 
@@ -368,7 +407,8 @@ preDiagnostics <- function(z, mu, maxProp, maxDiff, npMinRatio = 4) {
   numericFeatureIndicators <- numericFeatureIndicators & includeFeatures
   muR <- mu[numericFeatureIndicators]
   zR <- z[binaryResults$zidx, numericFeatureIndicators]  # TODO - should we limit to zidx?
-  inRange <- (muR >= apply(zR, 2, min)) & (muR <= apply(zR, 2, max))
+  inRangeTol <- maxDiff  # TODO should we use a different param?
+  inRange <- (muR >= apply(zR, 2, min)-maxDiff) & (muR <= apply(zR, 2, max)+maxDiff)
   outOfRange <- names(muR[!inRange])
   if (length(outOfRange) > 0) {
     ParallelLogger::logError('Out of range variables:')
@@ -564,6 +604,7 @@ postDiagnostics <- function(w, z, mu) {
     'chi2 to uniform' = chi2ToUnif,
     kl = kl,
     'Max Weighted SMD' = maxWeightedSMD)  # TODO add diagnostics
+  ParallelLogger::logInfo(glue("Max weighted SMD = {maxWeightedSMD}"))
   return(diagnostics)
 }
 
