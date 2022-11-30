@@ -29,7 +29,7 @@ algorithm will invoke internal re-weighting using sub-samples of this size (in t
 ### Post-weighting diagnostics
 If the re-weighting algorithm finds a vector of weights that satisfies the task's constraints, the evaluation module
 further examines them. The main examination is computation of the maximum weighted *standardized mean difference* (SMD).
-The algorithm continues if the maximum weighted SMD is greater than 0.2.
+The algorithm returns a 'Success' status if the maximum weighted SMD is smaller than 0.2.
 
 ### Estimation
 Finally, performance measures are computed using the weighted versions.
