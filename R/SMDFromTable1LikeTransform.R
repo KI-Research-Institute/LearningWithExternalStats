@@ -34,7 +34,7 @@ computeMaxSMD <- function(mu, Z, w=NULL) {
       }
     }
   }
-  return(max(d))
+  return(max(d, na.rm = T))
 }
 
 
