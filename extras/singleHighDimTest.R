@@ -1,3 +1,8 @@
+rm(list = ls())
+gc()
+if (!is.null(dev.list()["RStudioGD"]))
+  dev.off(dev.list()["RStudioGD"])
+
 library(LearningWithExternalStats)
 library(glue)
 library(glmnet)
@@ -10,14 +15,64 @@ source('./mlWrappers/wglmnet.R')
 source('./mlWrappers/wxgboost.R')
 source('./mlWrappers/wrappedml.R')
 source('./simulations/anchorModelSimulator.R')
+source('../../explore/FastBootstrap.R')
 
 
-n = 3e4  # number of samples in train and tests sets
-p = 500  # number of features
+n = 1000  # number of samples in train and tests sets
+p = 10 # number of features
 binary = T # type of covariates
+lambda = 1e-1
+
+# Optimization algorithms
+# wOptimizers <- vector(mode = 'list', length = 2)
+
+minEpsilon0 <- 1e-4
+maxEpsilon0 <- 1e-1
+nEpsilon0 <- 10
+
+
+wOptimizer <- cyclicOptimizer(
+  minSd = 1e-4,
+  nIter = 40,
+  p = 1e-1,
+  outputDir = 'D:/projects/robustness/high-dim-small'
+)
+
+
+
+wOptimizer <- cvxWeightOptimizer()
+
+
+
+minAlpha <- 0.1
+maxAlpha <- 10
+nAlphas <- 5
+wOptimizer <- seTunedWeightOptimizer(
+  nIter = 1000,
+  alphas = minAlpha*exp(log(maxAlpha/minAlpha)*(0:nAlphas)/nAlphas),
+  improveTh = 1,
+  maxErr = 1e-3,
+  approxUpdate = F,
+  outputDir = 'D:/projects/robustness/high-dim-small'
+)
+
+
+wOptimizer <- sgdTunedWeightOptimizer(
+  epsilon0s = minEpsilon0*exp(log(maxEpsilon0/minEpsilon0)*(0:nEpsilon0)/nEpsilon0),
+  polyBeta = 1,
+  batchSize = 100,
+  nIter = 1000,
+  nProbe = 50,
+  normalizeNu = T,
+  outputDir = 'D:/projects/robustness/high-dim-small',
+  averaging = T
+)
+
+
+
 
 # Simulation model
-outcomeOffset = -log(n/1000)  # offset of the outcome logistic model, determines outcome prevalence
+outcomeOffset = -log(4)  # offset of the outcome logistic model, determines outcome prevalence
 sigma_B_X_AH = 0  # degree of porximity assumption violation
 sigma_B_Y_X_factor = 4
 sigma_B_Y_XA_factor = 4
@@ -27,17 +82,14 @@ trainer = wglmnet()  # wXGBoost()
 
 # Reweighing parameters
 externalEstimatorSettings <-  createExternalEstimatorSettings(
-    divergence = 'entropy',  # entropy, chi2
-    lambda = 1e-1,
-    minW = 0,
-    optimizationMethod = 'dual',  # dual, primal
-    nMaxReweight = 5000, # maximum samples in a single round of repeated estimations
-    stratifiedSampling = T,
-    nRepetitions = 10,
-    maxProp = 100,
-    outputDir = getwd(),
-    maxCores = 3
-  )
+  reweightAlgorithm = wOptimizer,
+  nMaxReweight = n, # maximum samples in a single round of repeated estimations
+  stratifiedSampling = T,
+  nRepetitions = 200,
+  maxProp = 100,
+  outputDir = getwd(),
+  maxCores = 15
+)
 
 # Simulate data
 hyperParams = getDefaultModelHyperParams(
@@ -80,18 +132,8 @@ extAuc <- auc(roc(d$externalTest[['Y']], pExternal, quiet = TRUE, direction='<')
 
 observedRisk <- mean(d$externalTest[['Y']])
 predictedRisk <- mean(pExternal)
-cat('------- Observerved Risk', observedRisk, '----------\n')
-cat('------- Predicted   Risk', predictedRisk, '----------\n')
 
 internalY <- d$internalTest[['Y']]
-results <- list(
-  'n' = length(internalY),
-  'n outcome' = sum(internalY),
-  'Internal AUC' = internalAUC,
-  'External AUC' = extAuc,
-  'Training Time' = trainingTime,
-  'n Reweight Vars' = length(vars1)
-)
 
 internalK <- d$internalTest[, c(vars1, 'Y')]
 externalK <- d$externalTest[, c(vars1, 'Y')]
@@ -100,31 +142,23 @@ dTransformedExt <- computeTable1LikeTransformation(externalK, outcomeBalance=TRU
 muExt <- colMeans(dTransformedExt)
 internalData <- list(z=dTransformedInt, p = pInternal, y = internalK[['Y']])
 
-res <- estimateExternalPerformanceFromStatistics(
+
+result <- estimateExternalPerformanceFromStatistics(
   internalData = internalData,
   externalStats = muExt,
   externalEstimatorSettings = externalEstimatorSettings)
 
-cat('Training time:\n')
-print(trainingTime)
-print(internalAUC, digits=3)
-print(extAuc, digits=3)
+comparison <- list(
+  extAuc=extAuc,
+  internalAUC=internalAUC,
+  estAUC=result$estimation['AUROC', ])
+
+cat('\nSummary:\n')
+print(unlist(comparison), digits=3)
+cat('Estimation time ')
+print(result$estimationTime)
+
+print(result$estimation)
 
 
-showResults <- c(
-  'n',
-  'n outcome',
-  'Max weight',
-  'chi2 to uniform',
-  'kl',
-  'Max Weighted SMD',
-  'AUROC',
-  'Rough 95% lower AUROC',
-  'Rough 95% upper AUROC',
-  'n repetitions',
-  'Brier score',
-  'Global calibration mean prediction',
-  'Global calibration observed risk')
-estimationView <- res$estimation[showResults, , drop = F]
-estimationView[, 'value'] <- apply(estimationView, 1, function(x) {sprintf('%.3g', x)})
-print(estimationView)
+

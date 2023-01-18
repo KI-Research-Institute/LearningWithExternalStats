@@ -5,13 +5,7 @@
 \title{Create settings for \code{estimateExternalPerformanceFromStatistics}}
 \usage{
 createExternalEstimatorSettings(
-  divergence = "entropy",
-  lambda = 1e-06,
-  minSd = 1e-04,
-  minW = 1e-06,
-  distance = "l2",
-  optimizationMethod = "primal",
-  solver = "ECOS",
+  reweightAlgorithm,
   nMaxReweight = 10000,
   nRepetitions = 1,
   stratifiedSampling = T,
@@ -23,21 +17,8 @@ createExternalEstimatorSettings(
 )
 }
 \arguments{
-\item{divergence}{'entropy' or 'chi2'.
-'entropy' directs the algorithm to minimize the negative entropy, \eqn{\sum_i w_i \log w_i}.
-'chi2' is \eqn{\sum_i(w_i-\frac{1}{n})^2}}
-
-\item{lambda}{lambda - regularization parameter}
-
-\item{minSd}{minimum variance for a columns to be included}
-
-\item{minW}{minimum weight}
-
-\item{distance}{distance between mean vectors, l1 or l2}
-
-\item{optimizationMethod}{primal or dual. Currently dual works only with entropy divergence}
-
-\item{solver}{solver ("ECOS" "ECOS_BB" "SCS" "OSQP")}
+\item{reweightAlgorithm}{alogrithm that attempts to reweight an internal sample to get similar expectations from an
+external one}
 
 \item{nMaxReweight}{maximum number of samples for re-weighting. If this number is smaller than the number of
 observations, then the estimator acts on sub-samples of the data-set.}

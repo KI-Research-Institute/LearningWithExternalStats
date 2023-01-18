@@ -16,15 +16,88 @@ source('./simulations/anchorModelSimulator.R')
 
 
 getDefaultEfesTestParams <- function(outputDir) {
-  nmax <- 5000  # maximum samples in a single round of repeated estimations
+
+  minEpsilon0 <- 1e-4
+  maxEpsilon0 <- 1e-0
+  nEpsilon0 <- 5
+
+  minAlpha <- 0.1
+  maxAlpha <- 10
+  nAlphas <- 5
+
+  alphas <- minAlpha*exp(log(maxAlpha/minAlpha)*(0:nAlphas)/nAlphas)
+  epsilon0s = minEpsilon0*exp(log(maxEpsilon0/minEpsilon0)*(0:nEpsilon0)/nEpsilon0)
+  epsilon0sDeterministic = minEpsilon0*exp(log(1e-1/minEpsilon0)*(0:nEpsilon0)/nEpsilon0)
+
+  # estDual <- sgdTunedWeightOptimizer(
+  #   outputDir=outputDir, epsilon0s=epsilon0sDeterministic, batchSize = NA, polyBeta = 0, improveTh=1e-4, nProbe = 10)
+  # estDualPrimal <- sgdTunedWeightOptimizer(
+  #   outputDir=outputDir, epsilon0s=epsilon0sDeterministic, batchSize = NA, polyBeta = 0, improveTh=1e-4, nProbe = 10,
+  #   primal = T)
+
+  maxProp = 100  # TODO refine this test
+  cvxAlg  <- createExternalEstimatorSettings(
+    reweightAlgorithm = cvxWeightOptimizer(),
+    shortName = 'CVX 5k',
+    stratifiedSampling = T,
+    nMaxReweight = 5000, # maximum samples in a single round of repeated estimations
+    nRepetitions = 10,
+    maxProp = maxProp,
+    outputDir = outputDir,
+    maxCores = 15
+  )
+
+
+  nrep <- 15
+  # 1.
+  est1 <- cvxAlg
+  est1$nRepetitions = nrep
+  est1$shortName <- 'W-MSE 5k few iters'
+  est1$nMaxReweight <- 5000
+  est1$reweightAlgorithm <-
+    seTunedWeightOptimizer(
+      alphas = alphas, outputDir=outputDir, improveTh = 1e-4, maxErr = 1, nIter = 500, nTuneIter=20)
+
+  # 2.
+  est2 <- cvxAlg
+  est2$nRepetitions = nrep
+  est2$shortName <- 'W-MSE 5k few warm start SGD-DUAL 1k'
+  est2$nMaxReweight <- 5000
+  est2$warmStartAlgorithm <-
+    seTunedWeightOptimizer(
+      alphas = alphas, outputDir=outputDir, improveTh = 1e-4, maxErr = 1, nIter = 100, nTuneIter=10)
+  est2$reweightAlgorithm <-
+    seTunedWeightOptimizer(
+      alphas = alphas, outputDir=outputDir, improveTh = 1e-4, maxErr = 1, nIter = 500, nTuneIter=20)
+  # 3.
+  est3 <- cvxAlg
+  est3$nRepetitions = nrep
+  est3$shortName <- 'W-MSE 5k many iters'
+  est3$nMaxReweight <- 5000
+  est3$reweightAlgorithm <-
+    seTunedWeightOptimizer(alphas = alphas, outputDir=outputDir, improveTh = 1e-4, maxErr = 1, nIter = 1000, nTuneIter=50)
+
+  # 4.
+  est4 <- cvxAlg
+  est4$nRepetitions = nrep
+  est4$shortName <- 'W-MSE 5k few warm start SGD-DUAL 1k'
+  est4$nMaxReweight <- 5000
+  est4$warmStartAlgorithm <-
+    seTunedWeightOptimizer(
+      alphas = alphas, outputDir=outputDir, improveTh = 1e-4, maxErr = 1, nIter = 100, nTuneIter=10)
+    # sgdTunedWeightOptimizer(outputDir=outputDir, epsilon0s=epsilon0s, batchSize = 1000, polyBeta = 1)
+  est4$reweightAlgorithm <-
+    seTunedWeightOptimizer(
+      alphas = alphas, outputDir=outputDir, improveTh = 1e-4, maxErr = 1, nIter = 1000, nTuneIter=50)
+
+
   minW <- 0  # minimum weight
-  outputDir = outputDir
   maxProp = 100  # TODO refine this test
   testParams <- list(
     n = 3e5,  # number of samples in train and tests sets
     p = 500,  # number of features
     binary = T, # type of covariates
-    ntop = 500,  # number of features used in estimation of external performance
+    ntop = 1000,  # number of features used in estimation of external performance
     nTest = 20,  # number of tests
     # Simulation model
     outcomeOffset = -log(250),  # offset of the outcome logistic model, determines outcome prevalence
@@ -38,30 +111,11 @@ getDefaultEfesTestParams <- function(outputDir) {
     outputDir = outputDir,
     # Reweighing parameters
     estimationParams = list(
-      createExternalEstimatorSettings(
-        divergence = 'entropy',  # entropy, chi2
-        lambda = 1e-1,
-        minW = minW,
-        optimizationMethod = 'dual',  # dual, primal
-        nMaxReweight = nmax,
-        stratifiedSampling = T,
-        nRepetitions = 1,
-        maxProp = maxProp,
-        outputDir = outputDir,
-        maxCores = 15
-      ),
-      createExternalEstimatorSettings(
-        divergence = 'entropy',  # entropy, chi2
-        lambda = 1e-1,
-        minW = minW,
-        optimizationMethod = 'dual',  # dual, primal
-        stratifiedSampling = T,
-        nMaxReweight = nmax,
-        nRepetitions = 5,
-        maxProp = maxProp,
-        outputDir = outputDir,
-        maxCores = 15
-      )
+      #cvxAlg,
+      est1,
+      est2,
+      est3,
+      est4
     )
   )
   # Notes: SCS failed with n=1000 p=100 in 1/2 experiments. n=5000, p=10 5/7
@@ -109,42 +163,64 @@ testSimulatedData <- function(testParams, testNum) {
   # pInternal <- predict(model1, internalX, type = "response", s = "lambda.1se")[,1]
   pInternal <- wpredict(model1, internalX)
   internalAUC <- auc(roc(d$internalTest[['Y']], pInternal, direction = "<", quiet = T))
+  internalBrier <- mean((d$internalTest[['Y']]-pInternal)^2)
+  internalCalibrationObserved <- mean(d$internalTest[['Y']])
+  internalCalibrationPredicted <- mean(pInternal)
 
   # External results
   xExternal <- sapply(d$externalTest[xFeatures], as.numeric)
   # pExternal <- predict(model1, xExternal, type = "response", s = "lambda.1se")[,1]
   pExternal <- wpredict(model1, xExternal)
   extAuc <- auc(roc(d$externalTest[['Y']], pExternal, quiet = TRUE, direction='<'))
-
-  observedRisk <- mean(d$externalTest[['Y']])
-  predictedRisk <- mean(pExternal)
-  cat('------- Observerved Risk', observedRisk, '----------\n')
-  cat('------- Predicted   Risk', predictedRisk, '----------\n')
+  extBrier <- mean((d$externalTest[['Y']]-pExternal)^2)
+  extCalibrationObserved <- mean(d$externalTest[['Y']])
+  extCalibrationPredicted <- mean(pExternal)
 
   internalY <- d$internalTest[['Y']]
   results <- list(
     'n' = length(internalY),
     'n outcome' = sum(internalY),
     'Internal AUC' = internalAUC,
+    'Internal Brier' = internalBrier,
+    'Internal Calibration prediction' = internalCalibrationPredicted,
+    'Internal Calibration observed' = internalCalibrationObserved,
     'External AUC' = extAuc,
+    'External Brier' = extBrier,
+    'External Calibration prediction' = extCalibrationPredicted,
+    'External Calibration observed' = extCalibrationObserved,
     'Training Time' = trainingTime,
     'n Reweight Vars' = length(vars1)
   )
 
+  abbrevations <- list(
+    'AUC' = 'AUROC',
+    'Brier' = 'Brier score',
+    'Calibration prediction' = 'Global calibration mean prediction',
+    'Calibration observed' = 'Global calibration observed risk'
+  )
   for (i in 1:length(testParams$estimationParams)) {
     estResults <- estimatePerformance(testParams, i, d, pInternal, vars1)
     # if (estResults$status == 'Success') {
     if (!is.null(estResults$estimation)) {
-        results[glue('Est. Ext. AUC {i}')] <- estResults$estimation['AUROC', 'value']
+      for (metric in names(abbrevations)) {
+        a <- abbrevations[[metric]]
+        results[glue('Est. {metric} {i}')] <- estResults$estimation[a, 'value']
+        results[glue('Est. {metric} {i} low')] <- estResults$estimation[glue('95% lower {a}'), 'value']
+        results[glue('Est. {metric} {i} high')] <- estResults$estimation[glue('95% upper {a}'), 'value']
+      }
       results[glue('Estimation Time {i}')] <- estResults$estimationTime
       for (metric in c('Max Weighted SMD', 'chi2 to uniform', 'kl'))
         results[glue('{metric} {i}')] <- estResults$estimation[metric, 'value']
     }
     else {
-      results[glue('Est. Ext. AUC {i}')] <- NaN
-      results[glue('Estimation Time {i}')] <- NaN
+      for (metric in names(abbrevations)) {
+        results[glue('Est. {metric} {i}')] <- NA
+        results[glue('Est. {metric} {i} low')] <- NA
+        results[glue('Est. {metric} {i} high')] <- NA
+      }
+      results[glue('Estimation Time {i}')] <- estResults$estimationTime
       for (metric in c('Max Weighted SMD', 'chi2 to uniform', 'kl'))
-        results[glue('{metric} {i}')] <- NaN
+        results[glue('{metric} {i}')] <- NA
       cat('Failed test', i, '\n')
     }
   }
@@ -164,6 +240,15 @@ estimatePerformance <- function(testParams, i, d, pInternal, vars1) {
   internalData <- list(z=dTransformedInt, p = pInternal, y = internalK[['Y']])
   estimationParams <- testParams$estimationParams[[i]]
 
+  saveDataCSV <- F
+  if (saveDataCSV) {
+    csvPrefix <- glue('n{nrow(internalData$z)} m{ncol(internalData$z)} vi{testParams$sigma_B_X_AH}')
+    write.csv(
+      internalData$z, file = file.path(testParams$outputDir, glue('{csvPrefix} internal features.csv')))
+    write.csv(
+      data.frame(mean.value=muExt), file = file.path(testParams$outputDir, glue('{csvPrefix} external means.csv')))
+  }
+
   res <- estimateExternalPerformanceFromStatistics(
     internalData = internalData,
     externalStats = muExt,
@@ -180,6 +265,7 @@ repeatedTests <- function(params) {
   colnames(res) <- names(r)
   res[1, ] <- r
   print(res)
+  print(file.path(params$outputDir, glue('{testName} 1-1.csv')))
   write.csv(res[1, ], file.path(params$outputDir, glue('{testName} 1-1.csv')))
   for (i in 2:params$nTest) {
     r <- testSimulatedData(params, i)
@@ -189,7 +275,7 @@ repeatedTests <- function(params) {
   }
   res['diff'] <- abs(res['Internal AUC'] - res['External AUC'])
   for (k in 1:length(params$estimationParams))
-    res[glue('err {k}')] <- abs(res[glue('Est. Ext. AUC {k}')] - res['External AUC'])
+    res[glue('err {k}')] <- abs(res[glue('Est. AUC {k}')] - res['External AUC'])
   print(res)
   write.csv(res, file.path(params$outputDir, glue('{testName}.csv')))
   return(res)
@@ -205,8 +291,8 @@ getDataName <- function(params) {
 
 getTestName <- function(params) {
   testName <- getDataName(params)
-  testName <- glue("{testName}-{params$estimationParams[[1]]$nMaxReweight}-{params$estimationParams[[1]]$nRepetitions}")
-  testName <- glue("{testName}-{params$estimationParams[[2]]$nMaxReweight}-{params$estimationParams[[2]]$nRepetitions}")
+  # testName <- glue("{testName}-{params$estimationParams[[2]]$nMaxReweight}-{params$estimationParams[[2]]$nRepetitions}")
+  # testName <- glue("{testName}-{params$estimationParams[[2]]$nIter}-{params$estimationParams[[2]]$batchSize}")
   testName <- glue("{testName}-{params$trainer$name}")
   return(testName)
 }

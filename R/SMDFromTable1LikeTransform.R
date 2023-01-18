@@ -18,8 +18,7 @@ computeMaxSMD <- function(mu, Z, w=NULL) {
   p <- length(colSets)
   n <- nrow(Z)
   d <- vector(mode = 'numeric', length = p)
-  d[1] <- binaryVarSMD(mu[[1]], Z[ ,1], w)
-  for (i in 2:p) {
+  for (i in 1:p) {
     vars <- colSets[[i]]
     if (length(vars) == 2)
       d[i] <- continuousVarSMD(mu[vars], Z[,vars], w)
@@ -27,10 +26,10 @@ computeMaxSMD <- function(mu, Z, w=NULL) {
       if (length(vars) == 1)
         d[i] <- binaryVarSMD(mu[vars], Z[,vars], w)
       else {
-        cat(glue('n column sets={p}, p={length(mu)}'), '\n')
-        cat('Column set variables', vars, '\n')
-        warning(glue('Column set {i}, size not fit for SMD'), immediate. = T)
-        warning(glue('Column set {i}, size not fit for SMD'))
+        if (length(vars) == 0)
+          ParallelLogger::logWarn(glue('Column set {i}, size 0 not fit for SMD'))  # TODO check specific cases
+        else
+          ParallelLogger::logWarn(glue('Column set {i}, size {length(vars)} not fit for SMD v1={vars[1]}'))
       }
     }
   }
@@ -73,7 +72,7 @@ extractInteractionColumnSets <- function(featureNames) {
   covariates <- mainVars[mainVars!='Y']
   p <- length(covariates)
   # TODO - make this more efficient
-  colSets <- list(list(c('Y')))
+  colSets <- list(c('Y'))
   for (i in 1:p) {
     currentVar <- covariates[i]
     idxs <- sapply(featureNames, function(x) (startsWith(x, paste(currentVar, '_', sep='') )) )

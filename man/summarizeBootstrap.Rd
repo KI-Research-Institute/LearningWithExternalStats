@@ -15,4 +15,6 @@ a named list with bootstrap statistics for every metric
 }
 \description{
 Summarize statistics of metrics obtained by bootstrapping
+
+see https://www.r-bloggers.com/2019/09/understanding-bootstrap-confidence-interval-output-from-the-r-boot-package/
 }

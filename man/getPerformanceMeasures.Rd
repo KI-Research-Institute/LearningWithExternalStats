@@ -13,6 +13,9 @@ getPerformanceMeasures(y, p, w = NULL)
 
 \item{w}{(optional) weight vector}
 }
+\value{
+Performence measures....
+}
 \description{
 get performance measure from a pair of binary outcome vector and model predictions. The observations
 may be weighted by a weight vector
