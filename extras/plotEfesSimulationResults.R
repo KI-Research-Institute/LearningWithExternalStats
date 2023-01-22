@@ -1,5 +1,7 @@
 library(glue)
+library(RColorBrewer)
 
+brewerMap <- 'Dark2' # 'RdYlBu'
 
 plotHighDimResults <- function(params) {
   testname <- getTestName(params)
@@ -8,7 +10,7 @@ plotHighDimResults <- function(params) {
   legendLabels <- vector(mode = 'list', length = k)
   for (i in 1:k)
     legendLabels[[i]] <- params$estimationParams[[i]]$shortName
-  plotRunTime(outputDir, testname, legendLabels)
+  plotPropoertiesBox(outputDir, testname, legendLabels)
   plotResults(outputDir, testname, legendLabels)
 }
 
@@ -17,8 +19,8 @@ plotResults <- function(outputDir, testname, legendLabels) {
   k <- length(legendLabels)
   r = read.csv(file.path(outputDir, glue('{testname}.csv')))
   # print(r)
-  colors <- c('red', 'purple', 'orange', 'blue', 'brown')
-  pchs <- c(18,19,20,21,22)
+  colors <-  brewer.pal(k, brewerMap)
+  pchs <- c(18,19,20,21,22,23,24)
 
   for (m in c('AUC', 'Brier', 'Calibration.prediction', 'Calibration.observed')) {
     allAUCs = c(r[[glue('Internal.{m}')]], r[[glue('External.{m}')]] ,
@@ -40,29 +42,52 @@ plotResults <- function(outputDir, testname, legendLabels) {
     }
     lines(xlim, xlim)
     legend('bottomright', legend = c('Internal test', legendLabels), pch=c(17,pchs[1:k]),
-           col=c('black', colors[1:k]))
+           col=c('black', colors[1:k]), inset=0.002)
     dev.off()
   }
 }
 
 
-plotRunTime <- function(outputDir, testname, legendLabels) {
+plotPropoertiesBox <- function(outputDir, testname, legendLabels) {
+  for (p in c('Estimation.Time', 'Est..Opt.err', 'Est..n.iter'))
+    plotPropertyBox(outputDir, testname, legendLabels, p)
+}
+
+plotPropertyBox <- function(outputDir, testname, legendLabels, p) {
 
   r = read.csv(file.path(outputDir, glue('{testname}.csv')))
   # print(r)
-  colors <- c('red', 'purple', 'orange', 'blue', 'brown')
   n <- nrow(r)
   k <- length(legendLabels)
+  colors <-  brewer.pal(k, brewerMap)
+
   runTimes <- matrix(ncol = k, nrow = n)
 
   for (i in 1:k) {
-    c <- r[[glue('Estimation.Time.{i}')]]
+    c <- r[[glue('{p}.{i}')]]
     runTimes[, i] <- c
   }
 
-  png(filename = file.path(outputDir, glue('{testname} runtimes.png')), width = 480, height = 480)
-  boxplot(runTimes, col = colors[1:k], ylab = 'Runtime (minutes)')
-  legend('bottomright', fill = colors[1:k], legend=legendLabels, cex=1, inset=0.02)
+  png(filename = file.path(outputDir, glue('{testname} {p}.png')), width = 480, height = 480)
+  boxplot(runTimes, col = colors[1:k], ylab = p, log='y')
+  if (p=='Estimation.Time')
+    legend('topleft', fill = colors[1:k], legend=legendLabels, cex=1, inset=0.02)
   dev.off()
 
+}
+
+
+plotOffsetResults <- function(outputDir, summaryName, legendLabels) {
+  k <- length(legendLabels)
+  colors <-  brewer.pal(k, brewerMap)
+  for (metric in c('AUC', 'Brier')) {
+    metricErr <- read.csv(file.path(outputDir, glue('{summaryName} {metric}.csv')))
+    metricErr <- metricErr[, 2:ncol(metricErr)]  # TODO save without index
+    logName <- glue('{summaryName} {metric}.png')
+    png(filename = file.path(testParams$outputDir, logName), width = 480, height = 480)
+    boxplot(t(metricErr), col = colors[1:k], ylab=metric)
+    lines(c(0, nrow(metricErr)+1), c(0, 0), col='black')
+    # legend('topright', fill = colors[1:k], legend=legendLabels, cex=1, inset=0.02)
+    dev.off()
+  }
 }

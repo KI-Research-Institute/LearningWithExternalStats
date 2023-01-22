@@ -6,18 +6,19 @@
 \usage{
 createExternalEstimatorSettings(
   reweightAlgorithm,
-  nMaxReweight = 10000,
+  nMaxReweight = 20000,
   nRepetitions = 1,
   stratifiedSampling = T,
-  maxProp = 500,
   maxDiff = 0.01,
   maxWSMD = 0.2,
   outputDir = getwd(),
-  maxCores = 1
+  maxCores = 1,
+  shortName = NULL,
+  warmStartAlgorithm = NULL
 )
 }
 \arguments{
-\item{reweightAlgorithm}{alogrithm that attempts to reweight an internal sample to get similar expectations from an
+\item{reweightAlgorithm}{algorithm that attempts to reweight an internal sample to get similar expectations from an
 external one}
 
 \item{nMaxReweight}{maximum number of samples for re-weighting. If this number is smaller than the number of
@@ -27,8 +28,6 @@ observations, then the estimator acts on sub-samples of the data-set.}
 
 \item{stratifiedSampling}{attempt to sample a balanced number of samples for both outcome groups.}
 
-\item{maxProp}{maximum proportion between external and internal means.}
-
 \item{maxDiff}{maximum difference between  external and internal fequencies in case of unary variables or
 binary variables with high proportion.}
 
@@ -37,9 +36,15 @@ binary variables with high proportion.}
 \item{outputDir}{output directory for logging}
 
 \item{maxCores}{maximum number of cores for parallel processing of multiple sub-samples.}
+
+\item{shortName}{a short name for display puposes}
+
+\item{warmStartAlgorithm}{algorithm for intialization of weights before bootstrapping}
 }
 \value{
 An object of class \code{externalEstimatorSettings}
+
+TODO update this
 }
 \description{
 evaluation from external stats

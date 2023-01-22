@@ -6,18 +6,23 @@
 \usage{
 optimizeWeightSGD(
   wOptimizer,
-  C,
-  extendedMu,
+  Z,
+  muExt,
   balanceTrain,
-  cValidation = NULL,
-  yValidation = NULL,
-  verbose = F,
   improveTh = 1e-04,
   nProbe = 50,
   averaging = F
 )
 }
 \arguments{
+\item{wOptimizer}{and optimizer object}
+
+\item{Z}{feature matrix}
+
+\item{muExt}{external statistics}
+
+\item{balanceTrain}{balancing object}
+
 \item{verbose}{}
 }
 \value{

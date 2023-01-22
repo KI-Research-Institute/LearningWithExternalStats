@@ -7,7 +7,7 @@
 balanceClassesByUpsampling(y)
 }
 \arguments{
-\item{y}{}
+\item{y}{vector of outcomes}
 }
 \value{
 a named list with \code{sampleIdx} and \code{nDup}

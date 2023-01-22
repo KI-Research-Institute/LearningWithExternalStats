@@ -27,5 +27,5 @@ cvxWeightOptimizer(
 An object of class cvxWeightOptimizer
 }
 \description{
-a reweighting object.
+a wrapper for CVX base weight optimizer
 }

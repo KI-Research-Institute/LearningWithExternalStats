@@ -19,11 +19,11 @@ getDefaultEfesTestParams <- function(outputDir) {
 
   minEpsilon0 <- 1e-4
   maxEpsilon0 <- 1e-0
-  nEpsilon0 <- 5
+  nEpsilon0 <- 4
 
   minAlpha <- 0.1
   maxAlpha <- 10
-  nAlphas <- 5
+  nAlphas <- 4
 
   alphas <- minAlpha*exp(log(maxAlpha/minAlpha)*(0:nAlphas)/nAlphas)
   epsilon0s = minEpsilon0*exp(log(maxEpsilon0/minEpsilon0)*(0:nEpsilon0)/nEpsilon0)
@@ -49,46 +49,47 @@ getDefaultEfesTestParams <- function(outputDir) {
 
 
   nrep <- 15
+  nMaxReweight <- 500 # 5000
   # 1.
   est1 <- cvxAlg
   est1$nRepetitions = nrep
-  est1$shortName <- 'W-MSE 5k few iters'
-  est1$nMaxReweight <- 5000
+  est1$shortName <- 'W-MSE few iters'
+  est1$nMaxReweight <- nMaxReweight
   est1$reweightAlgorithm <-
     seTunedWeightOptimizer(
-      alphas = alphas, outputDir=outputDir, improveTh = 1e-4, maxErr = 1, nIter = 500, nTuneIter=20)
+      alphas = alphas, outputDir=outputDir, improveTh = 1e-4, maxErr = 1, nIter = 200, nTuneIter=20)
 
   # 2.
   est2 <- cvxAlg
   est2$nRepetitions = nrep
-  est2$shortName <- 'W-MSE 5k few warm start SGD-DUAL 1k'
-  est2$nMaxReweight <- 5000
+  est2$shortName <- 'W-MSE few warm start'
+  est2$nMaxReweight <- nMaxReweight
   est2$warmStartAlgorithm <-
     seTunedWeightOptimizer(
-      alphas = alphas, outputDir=outputDir, improveTh = 1e-4, maxErr = 1, nIter = 100, nTuneIter=10)
+      alphas = alphas, outputDir=outputDir, improveTh = 1e-4, maxErr = 1, nIter = 40, nTuneIter=4)
   est2$reweightAlgorithm <-
     seTunedWeightOptimizer(
-      alphas = alphas, outputDir=outputDir, improveTh = 1e-4, maxErr = 1, nIter = 500, nTuneIter=20)
+      alphas = alphas, outputDir=outputDir, improveTh = 1e-4, maxErr = 1, nIter = 200, nTuneIter=20)
   # 3.
   est3 <- cvxAlg
   est3$nRepetitions = nrep
-  est3$shortName <- 'W-MSE 5k many iters'
-  est3$nMaxReweight <- 5000
+  est3$shortName <- 'W-MSE many iters'
+  est3$nMaxReweight <- nMaxReweight
   est3$reweightAlgorithm <-
-    seTunedWeightOptimizer(alphas = alphas, outputDir=outputDir, improveTh = 1e-4, maxErr = 1, nIter = 1000, nTuneIter=50)
+    seTunedWeightOptimizer(alphas = alphas, outputDir=outputDir, improveTh = 1e-4, maxErr = 1, nIter = 500, nTuneIter=50)
 
   # 4.
   est4 <- cvxAlg
   est4$nRepetitions = nrep
-  est4$shortName <- 'W-MSE 5k few warm start SGD-DUAL 1k'
-  est4$nMaxReweight <- 5000
+  est4$shortName <- 'W-MSE many warm start'
+  est4$nMaxReweight <- nMaxReweight
   est4$warmStartAlgorithm <-
     seTunedWeightOptimizer(
-      alphas = alphas, outputDir=outputDir, improveTh = 1e-4, maxErr = 1, nIter = 100, nTuneIter=10)
+      alphas = alphas, outputDir=outputDir, improveTh = 1e-4, maxErr = 1, nIter = 40, nTuneIter=4)
     # sgdTunedWeightOptimizer(outputDir=outputDir, epsilon0s=epsilon0s, batchSize = 1000, polyBeta = 1)
   est4$reweightAlgorithm <-
     seTunedWeightOptimizer(
-      alphas = alphas, outputDir=outputDir, improveTh = 1e-4, maxErr = 1, nIter = 1000, nTuneIter=50)
+      alphas = alphas, outputDir=outputDir, improveTh = 1e-4, maxErr = 1, nIter = 500, nTuneIter=50)
 
 
   minW <- 0  # minimum weight
@@ -122,6 +123,8 @@ getDefaultEfesTestParams <- function(outputDir) {
   # ECOS_BB quite similar to ECOS (BB is branch and bound and suitable for mixed integer problems)
   return(testParams)
 }
+
+
 
 
 
@@ -196,7 +199,9 @@ testSimulatedData <- function(testParams, testNum) {
     'AUC' = 'AUROC',
     'Brier' = 'Brier score',
     'Calibration prediction' = 'Global calibration mean prediction',
-    'Calibration observed' = 'Global calibration observed risk'
+    'Calibration observed' = 'Global calibration observed risk',
+    'Opt err' = 'Opt err',
+    'n iter' = 'n iter'
   )
   for (i in 1:length(testParams$estimationParams)) {
     estResults <- estimatePerformance(testParams, i, d, pInternal, vars1)

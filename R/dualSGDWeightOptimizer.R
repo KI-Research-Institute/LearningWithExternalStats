@@ -1,22 +1,21 @@
 #' Optimization using minimum squared error criterion with initial tuning of the
 #' base learning rate.
 #'
-#' @param epsilon0
-#' @param nTuneIter
-#' @param minSd
-#' @param nu0
-#' @param nTuneIter
-#' @param nIter
-#' @param outputDir
-#' @param improveTh
-#' @param momentumC
-#' @param batchSize
-#' @param normalizeMu
-#' @param polyBeta
-#' @param maxAbsNu
-#' @param maxNuNorm
-#' @param nProbe
-#' @param averaging
+#' @param epsilon0 learning rates vector
+#' @param nTuneIter number of iteration for finding the correct epsilon
+#' @param minSd minimum standard deviation for removing features
+#' @param nu0 initial value
+#' @param nIter maximum number of iterations
+#' @param outputDir output directory
+#' @param improveTh threshold for stopping
+#' @param momentumC momentum coefficient
+#' @param batchSize batch size
+#' @param normalizeMu force Nu to represent a distribution
+#' @param polyBeta coefficient for learning rate decay
+#' @param maxAbsNu maximum absolute value of nu to avoid numeric overflow
+#' @param maxNuNorm  regulaziation parameter to limit max nu norm
+#' @param nProbe number of iterations for showing intermediate resualts and assessments
+#' @param averaging average the parameters over iterations
 #'
 #' @return an object of class seTunedWeightOptimizer
 #'
@@ -62,16 +61,11 @@ optimizeWeightSGDTuned <- function(wOptimizer, Z, mu) {
   n <- nrow(Z)
   Y <- Z[['Y']]
 
-  Z <- as.matrix(Z)
-  #normalized <- normalizeDataAndExpectations(Z, mu, wOptimizer$minSd)  # TODO
-  #normalized$Z <- as.matrix(normalized$Z)
-  #rm(Z)
-  # gc()
+  Z <- as.matrix(Z)  # TODO do it before
 
   ParallelLogger::logInfo(glue('n = {n}'))
   balanceTrain <- balanceClassesByUpsampling(Y)  # TODO
 
-  # tOptimizer <- getTunedOptimizer(wOptimizer, cAll, extendedMu, balanceTrain)
   tOptimizer <- getTunedOptimizer(wOptimizer, Z, mu, balanceTrain)
 
   maxTrials <- 5
@@ -113,7 +107,7 @@ optimizeWeightSGDTuned <- function(wOptimizer, Z, mu) {
 
 #' Generate information for class balancing during training and weight coputations
 #'
-#' @param y
+#' @param y vector of outcomes
 #'
 #' @return a named list with \code{sampleIdx} and \code{nDup}
 #'
@@ -140,19 +134,6 @@ balanceClassesByUpsampling <- function(y) {
 }
 
 
-dualObjective <- function(nu, C, d) {
-  objective <- t(d) %*% nu + exp(-1) * sum(exp(- t(C) %*% nu))
-  return(objective)
-}
-
-
-dualGradient <- function(nu, C, d) {
-  # d <- c(mu, 1)
-  g <- d - exp(-1) *  rowSums(C %*% exp(- t(C) %*% nu))
-  return(g)
-}
-
-
 exponentialEpsilonSchedule <- function(wOptimizer, n) {
   i <- 1:wOptimizer$nIter
   gamma <- 0.001
@@ -173,18 +154,18 @@ polynomialEpsilonSchedule <- function(wOptimizer, n) {
 #' @description select a step size that gives the best objective after a few
 #' starting iterations
 #'
-#' @param wOptimizer
-#' @param cTrain
-#' @param extendedMu
-#' @param balanceTrain
+#' @param wOptimizer optimization object of type \code{sgdTunedWeightOptimizer}
+#' @param Z feature matrix
+#' @param mu statistics vector
+#' @param balanceTrain balancing object
 #'
 #' @return tuned optimizer
 #'
-getTunedOptimizer <- function(wOptimizer, cTrain, extendedMu, balanceTrain) {
+getTunedOptimizer <- function(wOptimizer, Z, mu, balanceTrain) {
 
   runId <- gsub(':', '-', Sys.time())
   runPrefix = glue('optimizeWeightSGDTuned{runId}')
-  m <- length(extendedMu)-1
+  m <- length(mu)
 
   swOptimizer <- sgdWeightOptimizer(
     minSd = wOptimizer$minSd,
@@ -207,11 +188,11 @@ getTunedOptimizer <- function(wOptimizer, cTrain, extendedMu, balanceTrain) {
     iOptimizer$nIter <- wOptimizer$nTuneIter  #
     iOptimizer$epsilon0 <- epsilon0s[i] #
     r  <- iOptimizer$optimize(
-      iOptimizer, cTrain, extendedMu, balanceTrain, improveTh=wOptimizer$improveTh, averaging=wOptimizer$averaging)
+      iOptimizer, Z, mu, balanceTrain, improveTh=wOptimizer$improveTh, averaging=wOptimizer$averaging)
     gc()
     if (any(is.na(r$nu)) || max(abs(r$nu))>wOptimizer$maxAbsNu)  # TODO assuming that if epsilon0 overflows so will larger values
       break
-    r$nu[m+1, 1] <- -1 + log(sum(exp(-t(cTrain[1:m,]) %*% r$nu[1:m,1])))  # Normalize
+    r$nu[m+1, 1] <- -1 + log(sum(exp(-t(Z[1:m,]) %*% r$nu[1:m,1])))  # Normalize
     objectives[i] <- r$log[nrow(r$log), 1]  # TODO verify that this is not batch dependant
   }
   # png(filename = file.path(wOptimizer$outputDir, glue('{runPrefix} epsilon.png')))
@@ -231,17 +212,17 @@ getTunedOptimizer <- function(wOptimizer, cTrain, extendedMu, balanceTrain) {
 
 #' Optimization using stochastic gradient descent
 #'
-#' @param wOptimizer
-#' @param C
-#' @param extendedMu
-#' @param balanceTrain
+#' @param wOptimizer and optimizer object
+#' @param Z feature matrix
+#' @param muExt external statistics
+#' @param balanceTrain balancing object
 #' @param verbose
 #'
 #' @return optimization results. A list
 #'
 #'
 optimizeWeightSGD <- function(
-    wOptimizer, Z, muExt, balanceTrain, verbose=F, improveTh = 1e-4, nProbe = 50, averaging=F) {
+    wOptimizer, Z, muExt, balanceTrain, improveTh = 1e-4, nProbe = 50, averaging=F) {
 
   # Init params
   n <- nrow(Z)
@@ -316,14 +297,14 @@ optimizeWeightSGD <- function(
   }
   l <- l[1:i, ]
 
-  if (verbose && nRescales>0)
+  if (nRescales>0)
     ParallelLogger::logInfo(glue('Rescaled nu to {wOptimizer$maxNuNorm} {nRescales} times'))
   ParallelLogger::logInfo(glue('Finished at {i}\tdual {l[i,1]}\tprimal {l[i,2]}\tnorm {l[i,3]}\tmax {l[i,4]}'))
 
   if (averaging)
-    return(list(log=l, nu=nuBar))
+    return(list(log=l, nu=nuBar, err=l[i,2]))
   else
-    return(list(log=l, nu=nu))
+    return(list(log=l, nu=nu, err=l[i,2]))
 }
 
 

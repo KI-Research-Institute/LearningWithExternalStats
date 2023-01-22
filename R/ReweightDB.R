@@ -75,7 +75,7 @@ reweightByMeans <- function(
 
 #' @title a reweighting object.
 #'
-#' @description
+#' @description a wrapper for CVX base weight optimizer
 #'
 #' @param divergence 'entropy' or 'chi2'.
 #' 'entropy' directs the algorithm to minimize the negative entropy,

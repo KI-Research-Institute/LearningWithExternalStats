@@ -24,7 +24,35 @@ sgdTunedWeightOptimizer(
 )
 }
 \arguments{
-\item{averaging}{}
+\item{nTuneIter}{number of iteration for finding the correct epsilon}
+
+\item{minSd}{minimum standard deviation for removing features}
+
+\item{nu0}{initial value}
+
+\item{nIter}{maximum number of iterations}
+
+\item{batchSize}{batch size}
+
+\item{momentumC}{momentum coefficient}
+
+\item{outputDir}{output directory}
+
+\item{polyBeta}{coefficient for learning rate decay}
+
+\item{maxAbsNu}{maximum absolute value of nu to avoid numeric overflow}
+
+\item{maxNuNorm}{regulaziation parameter to limit max nu norm}
+
+\item{improveTh}{threshold for stopping}
+
+\item{nProbe}{number of iterations for showing intermediate resualts and assessments}
+
+\item{averaging}{average the parameters over iterations}
+
+\item{epsilon0}{learning rates vector}
+
+\item{normalizeMu}{force Nu to represent a distribution}
 }
 \value{
 an object of class seTunedWeightOptimizer

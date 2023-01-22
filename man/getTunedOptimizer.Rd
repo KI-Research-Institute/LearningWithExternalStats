@@ -4,10 +4,16 @@
 \alias{getTunedOptimizer}
 \title{Get a tuned optimizer}
 \usage{
-getTunedOptimizer(wOptimizer, cTrain, extendedMu, balanceTrain)
+getTunedOptimizer(wOptimizer, Z, mu, balanceTrain)
 }
 \arguments{
-\item{balanceTrain}{}
+\item{wOptimizer}{optimization object of type \code{sgdTunedWeightOptimizer}}
+
+\item{Z}{feature matrix}
+
+\item{mu}{statistics vector}
+
+\item{balanceTrain}{balancing object}
 }
 \value{
 tuned optimizer

@@ -24,7 +24,7 @@ Reweighing algorithm parameters:}
 
 \item{externalEstimatorSettings}{an object of class \code{externalEstimatorSettings}}
 
-\item{createEstimationLogger}{create a logger in outputDirectory}
+\item{createEstimationLogger}{boolearn, create a logger in outputDirectory}
 }
 \value{
 an object of \code{estimatedExternalPerformanceFromStatistics} with the following fields:

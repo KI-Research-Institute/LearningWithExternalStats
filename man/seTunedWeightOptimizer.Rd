@@ -2,29 +2,50 @@
 % Please edit documentation in R/mseWeightOptimizer.R
 \name{seTunedWeightOptimizer}
 \alias{seTunedWeightOptimizer}
-\title{Optimization using minimum squared error criterion with initial tuning of the
+\title{An optimizer that uses minimum squared error criterion with initial tuning of the
 base learning rate.}
 \usage{
 seTunedWeightOptimizer(
   alphas,
   minSd = 1e-04,
-  nu0 = NULL,
+  w0 = NULL,
   nTuneIter = 50,
   nIter = 1000,
   outputDir = NULL,
   improveTh = 1e-04,
   momentumC = 0.9,
   approxUpdate = F,
-  maxErr = 0.01
+  maxErr = 0.01,
+  nesterov = F
 )
 }
 \arguments{
-\item{maxErr}{}
+\item{alphas}{a set of candidate beseline rates}
+
+\item{minSd}{minimum standard deviation of feature}
+
+\item{w0}{initial weights vector, if NULL the weights will be initialized to uniform}
+
+\item{nTuneIter}{number of iterations for tunning}
+
+\item{nIter}{maximum number of iterations}
+
+\item{outputDir}{output directory for logging}
+
+\item{improveTh}{required accuracy}
+
+\item{momentumC}{momentum parameter}
+
+\item{approxUpdate}{using 1+x instead of exp(x), currently disabled}
+
+\item{maxErr}{alternative stopping criterion: error of the maximum statistic}
+
+\item{nesterov}{use nesterov momentum (boolean)}
 }
 \value{
-an object of class seTunedWeightOptimizer
+an object of class \code{seTunedWeightOptimizer}
 }
 \description{
-Optimization using minimum squared error criterion with initial tuning of the
+An optimizer that uses minimum squared error criterion with initial tuning of the
 base learning rate.
 }

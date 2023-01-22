@@ -9,31 +9,31 @@ NULL
 
 #' @title Create settings for \code{estimateExternalPerformanceFromStatistics}
 #'
-#' @param reweightAlgorithm alogrithm that attempts to reweight an internal sample to get similar expectations from an
+#' @param reweightAlgorithm algorithm that attempts to reweight an internal sample to get similar expectations from an
 #' external one
 #' @param nMaxReweight maximum number of samples for re-weighting. If this number is smaller than the number of
 #' observations, then the estimator acts on sub-samples of the data-set.
 #' @param nRepetitions number of repetitions with sub-samples.
 #' @param stratifiedSampling attempt to sample a balanced number of samples for both outcome groups.
-#' @param maxProp maximum proportion between external and internal means.
 #' @param maxDiff maximum difference between  external and internal fequencies in case of unary variables or
 #' binary variables with high proportion.
 #' @param maxWSMD maximum allowed weighted standardized mean difference
 #' @param outputDir output directory for logging
 #' @param maxCores maximum number of cores for parallel processing of multiple sub-samples.
+#' @param shortName a short name for display puposes
+#' @param warmStartAlgorithm algorithm for intialization of weights before bootstrapping
 #'
 #' @return
 #' An object of class \code{externalEstimatorSettings}
 #'
-#' @export
-#'
 #' TODO update this
+#'
+#' @export
 createExternalEstimatorSettings <- function(
     reweightAlgorithm,
-    nMaxReweight = 10000,
+    nMaxReweight = 20000,
     nRepetitions = 1,
     stratifiedSampling = T,
-    maxProp = 500,
     maxDiff = 0.01,
     maxWSMD = 0.2,
     outputDir = getwd(),
@@ -49,7 +49,6 @@ createExternalEstimatorSettings <- function(
     nMaxReweight = nMaxReweight,
     nRepetitions = nRepetitions,
     stratifiedSampling = stratifiedSampling,
-    maxProp = maxProp,
     maxDiff = maxDiff,
     maxWSMD = maxWSMD,
     outputDir = outputDir,
@@ -81,7 +80,7 @@ createExternalEstimatorSettings <- function(
 #'
 #' Reweighing algorithm parameters:
 #' @param externalEstimatorSettings an object of class \code{externalEstimatorSettings}
-#' @param createEstimationLogger create a logger in outputDirectory
+#' @param createEstimationLogger boolearn, create a logger in outputDirectory
 #'
 #' @return an object of \code{estimatedExternalPerformanceFromStatistics} with the following fields:
 #'
@@ -126,7 +125,6 @@ estimateExternalPerformanceFromStatistics <- function(
   preD <- preDiagnostics(
     internalData$z,
     externalStats,
-    maxProp = externalEstimatorSettings$maxProp,
     maxDiff = externalEstimatorSettings$maxDiff
     )
   result$preDiagnosis <- preD
@@ -140,7 +138,7 @@ estimateExternalPerformanceFromStatistics <- function(
   internalData$z <- internalData$z[preD$zidx, preD$representedFeatures]
   internalData$y <- internalData$y[preD$zidx]
   internalData$p <- internalData$p[preD$zidx]
-  # Generate indices of sub-samples
+  # Initialize sub-samples
   n <- sum(preD$zidx)
   nSubsets <- externalEstimatorSettings$nRepetitions
   if (externalEstimatorSettings$nMaxReweight < n*0.75)  { # TODO figure this out
@@ -153,23 +151,9 @@ estimateExternalPerformanceFromStatistics <- function(
 
   # Estimation
   estimationStartTime <- Sys.time()
-
-  # Warm start if defined
-  if (!is.null(externalEstimatorSettings$warmStartAlgorithm)) {
-    warmSettings <- externalEstimatorSettings
-    warmSettings$reweightAlgorithm <- externalEstimatorSettings$warmStartAlgorithm
-    mainResult <- estimateFullSetPerformance(internalData, externalStats, warmSettings)
-    w <- mainResult$reweightResults$w
-    if (!is.null(mainResult)) {
-      ra <- externalEstimatorSettings$reweightAlgorithm
-      externalEstimatorSettings$reweightAlgorithm <- ra$setInitialValue(ra, mainResult$reweightResults)
-      wRA <- externalEstimatorSettings$reweightAlgorithm$w0  # TODO just for debugging
-      ParallelLogger::logInfo(glue('Reweight algorithm w0: sum={sum(wRA)}, sd={sd(wRA)} n0-={sum(wRA<=0)}'))
-    }
-    else
-      ParallelLogger::logWarn('Failed to estimate initial value')
+  if (!is.null(externalEstimatorSettings$warmStartAlgorithm)) {    # Warm start if defined
+    externalEstimatorSettings <- warmStart(externalEstimatorSettings, internalData, externalStats)
   }
-
   nCores <- parallel::detectCores()
   uCores <- min(nCores-1, nSubsets, externalEstimatorSettings$maxCores)
   ParallelLogger::logInfo(glue('Detected {nCores} cores and using {uCores}\n'))
@@ -198,6 +182,35 @@ estimateExternalPerformanceFromStatistics <- function(
   result$status <- checkWsmdStatus(resultsMatrix, meanResults, externalEstimatorSettings)
   result$estimation = data.frame(value=unlist(c(list(as.list(meanResults), as.list(s)))))
   return(result)
+}
+
+
+#' Initialize parameters using a short run on the entire set
+#'
+#' @param externalEstimatorSettings an object of class \code{externalEstimatorSettings} with the parameters
+#' of the reweighing algorithm
+#' @param internalData a list that includes internal data and predictions with the following fields:
+#'   z: a data frame of transformed feature-outcome pairs
+#'   y: a vector of outcomes
+#'   p: a vector of predicted outcome probabilities
+#' @param externalStats a vector of means of transformed feature-outcome pairs
+#'
+#' @return an object of class \code{externalEstimatorSettings}
+#'
+warmStart <- function(externalEstimatorSettings, internalData, externalStats) {
+  warmSettings <- externalEstimatorSettings
+  warmSettings$reweightAlgorithm <- externalEstimatorSettings$warmStartAlgorithm
+  mainResult <- estimateFullSetPerformance(internalData, externalStats, warmSettings)
+  w <- mainResult$reweightResults$w
+  if (!is.null(mainResult)) {
+    ra <- externalEstimatorSettings$reweightAlgorithm
+    externalEstimatorSettings$reweightAlgorithm <- ra$setInitialValue(ra, mainResult$reweightResults)
+    wRA <- externalEstimatorSettings$reweightAlgorithm$w0  # TODO just for debugging
+    ParallelLogger::logInfo(glue('Reweight algorithm w0: sum={sum(wRA)}, sd={sd(wRA)} n0-={sum(wRA<=0)}'))
+  }
+  else
+    ParallelLogger::logWarn('Failed to estimate initial value')
+  return(externalEstimatorSettings)
 }
 
 
@@ -255,9 +268,9 @@ checkWsmdStatus <- function(resultsMatrix, meanResults, externalEstimatorSetting
 
 #' Random subset sampler
 #'
-#' @param n
-#' @param nmax
-#' @param replace
+#' @param n number of samples
+#' @param nmax maximum number of subsamples
+#' @param replace boolean for sampling with replacement
 #'
 #' @return a \code{randomSubsetSampler} objects
 #'
@@ -282,9 +295,9 @@ randomSubset <- function(s) {
 
 #' Stratified subset sampler
 #'
-#' @param n
-#' @param nmax
-#' @param Y
+#' @param n number of samples
+#' @param nmax maximum number of samples
+#' @param Y outcome vector
 #'
 #' @return a \code{stratifiedSampler} objects
 #'
@@ -372,6 +385,8 @@ estimateFullSetPerformance <- function(internalData, externalStats, estimationPa
   # Re-weighting
   wOptimizer <- pa$reweightAlgorithm
   reweightResults <- wOptimizer$optimize(wOptimizer, internalData$z, externalStats)
+  dbRes[['Opt err']] <- reweightResults$err
+  dbRes[['n iter']] <- nrow(reweightResults$log)
 
   # TODO make this optional
   if (F) {
@@ -436,7 +451,6 @@ checkVariableNamesOverlap <- function(z, mu) {
 #'
 #' @param z a data frame of transformed feature-outcome pairs
 #' @param mu a vector of means of transformed feature-outcome pairs
-#' @param maxProp maximum proportion between internal and external means to determine imbalance
 #' @param maxDiff maximum difference from which to check max prop
 #' @param npMinRatio minimum ratio between number of features and number of examples
 #'
@@ -444,7 +458,7 @@ checkVariableNamesOverlap <- function(z, mu) {
 #' ...
 #'
 #' @export
-preDiagnostics <- function(z, mu, maxProp, maxDiff, npMinRatio = 4) {
+preDiagnostics <- function(z, mu, maxDiff, npMinRatio = 4) {
   nInput <- nrow(z)
   pInput <- ncol(z)
 
@@ -463,7 +477,7 @@ preDiagnostics <- function(z, mu, maxProp, maxDiff, npMinRatio = 4) {
   }
   includeFeatures <- (!naInMu) & muIntersection
   # Regardless of Na status in mu, perform other tests
-  binaryResults <- preCheckBinaryFeatures(z, mu, includeFeatures, maxProp, maxDiff)
+  binaryResults <- preCheckBinaryFeatures(z, mu, includeFeatures, maxDiff)
   unaryResults <- preCheckUnaryFeatures(z, mu, binaryResults, maxUnaryDiff = maxDiff)
   includeFeatures <- unaryResults$includeFeatures
 
@@ -506,7 +520,7 @@ preDiagnostics <- function(z, mu, maxProp, maxDiff, npMinRatio = 4) {
 }
 
 
-preCheckBinaryFeatures <- function(z, mu, includeFeatures, maxProp, maxDiff) {
+preCheckBinaryFeatures <- function(z, mu, includeFeatures, maxDiff) {
   n1 <- nrow(z)
   binaryFeatureIndicators <- apply(z, 2, function(c) {length(unique(c))==2})
   binaryFeatureIndicators <- binaryFeatureIndicators & includeFeatures
@@ -528,8 +542,14 @@ preCheckBinaryFeatures <- function(z, mu, includeFeatures, maxProp, maxDiff) {
   includeBinaryFeatures <- binaryFeatureIndicators & includeFeatures
   binaryFeatures <- names(mu[includeBinaryFeatures])
   ParallelLogger::logInfo(glue('z has {length(binaryFeatures)} binary features'))
-  highlySkewedBinary <- getHighlySkewedBinaryFeatures(mu[binaryFeatures], z[zidx, binaryFeatures], maxProp, maxDiff)
+  highlySkewedBinary <- getHighlySkewedBinaryFeatures(mu[binaryFeatures], z[zidx, binaryFeatures], maxDiff)
   return(list(includeFeatures=includeFeatures, zidx = zidx, highlySkewedBinary=highlySkewedBinary))
+}
+
+
+varProxy <- function(n, n1, muExt) {
+  n0 <- n-n1
+  return( ((1-muExt)**2)/n0 + (muExt**2)/n1 )
 }
 
 
@@ -541,28 +561,35 @@ preCheckBinaryFeatures <- function(z, mu, includeFeatures, maxProp, maxDiff) {
 #'
 #' @param mu expectations
 #' @param z data
-#' @param maxProp max proportion
 #' @param maxDiff max difference from with to check max proportion
 #'
-getHighlySkewedBinaryFeatures <- function(mu, z, maxProp, maxDiff) {
-  ParallelLogger::logInfo(glue("Checking skewness with max proportion = {maxProp}, conditional max diff {maxDiff}"))
+getHighlySkewedBinaryFeatures <- function(mu, z, maxDiff) {
   imbalanced <- rep(F, length(mu))
-  propM <- rep(1, length(mu))
-  names(propM) <- names(mu)
+  propM <- rep(NA, length(mu))
+  n1s <- rep(NA, length(mu))
+  varProxies <- rep(NA, length(mu))
 
   if (!is.vector(z)) {
+    n <- nrow(z)
     meanz <- colMeans(z)
     for (i in 1:(length(mu))) {
       minzi <- min(z[ , i])
+      maxzi <- max(z[ , i])
+      n1s[i] <- sum(z[ , i] == maxzi)
       propM[i] <- abs((mu[i]-minzi)/(meanz[i]-minzi))
-      imbalanced[i] <- (propM[i]>maxProp | (1/maxProp)>propM[i]) & (abs(mu[i]-meanz[i]) > maxDiff)
+      varProxies[i] <- varProxy(n, n1s[i], (mu[i]-minzi)/(maxzi-minzi))
+      imbalanced[i] <- varProxies[i] > 0.001
     }
   }
   else {
+    n <- length(z)
     meanz <- mean(z)
     minz <- min(z)
+    maxz <- max(z)
+    n1 <- sum(z==maxz)
     propM[1] <- abs((mu[1]-minz)/(meanz-minz))
-    imbalanced[1] <- (propM[1]>maxProp | (1/maxProp)>propM[1]) & (abs(mu[1]-meanz) > maxDiff)
+    varProxies[1] <- varProxy(n, n1, (mu[1]-minz)/(maxz-minz))
+    imbalanced[1] <- varProxies[1] > 0.001
   }
   skewedNames <- names(mu[imbalanced])
   if (sum(imbalanced) > 0) {
@@ -573,8 +600,13 @@ getHighlySkewedBinaryFeatures <- function(mu, z, maxProp, maxDiff) {
     reportDf[[2]] <- mu[imbalanced]
     reportDf[[3]] <- propM[imbalanced]
     # print(reportDf)
-    for (f in skewedNames) {
-      ParallelLogger::logWarn(glue('Skewed feature {f}: mean={meanz[f]} mu={mu[f]} r={propM[f]}'))
+    for (i in which(imbalanced)) {
+      f <- names(mu)[i]
+      smean <- format(meanz[i], digits=3)
+      smu <- format(mu[i], digits=3)
+      spropM <- format(propM[i], digits=3)
+      sv <-format(varProxies[i], digits=3)
+      ParallelLogger::logWarn(glue('Skewed feature {f}: n={n} n1={n1s[i]} mean={smean} mu={smu} r={spropM} var proxy={sv}'))
     }
   }
   return(skewedNames)
@@ -582,7 +614,7 @@ getHighlySkewedBinaryFeatures <- function(mu, z, maxProp, maxDiff) {
 
 
 
-preCheckUnaryFeatures <- function(z, mu, results, maxUnaryDiff) {
+preCheckUnaryFeatures <- function(z, mu, results, maxUnaryDiff=0.01) {
   n1 <- nrow(z)
   includeFeatures <- results$includeFeatures
   unaryFeatures <- apply(z, 2, function(c) {length(unique(c))==1})

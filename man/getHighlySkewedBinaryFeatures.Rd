@@ -4,14 +4,12 @@
 \alias{getHighlySkewedBinaryFeatures}
 \title{Get highly skewed binary features}
 \usage{
-getHighlySkewedBinaryFeatures(mu, z, maxProp, maxDiff)
+getHighlySkewedBinaryFeatures(mu, z, maxDiff)
 }
 \arguments{
 \item{mu}{expectations}
 
 \item{z}{data}
-
-\item{maxProp}{max proportion}
 
 \item{maxDiff}{max difference from with to check max proportion}
 }

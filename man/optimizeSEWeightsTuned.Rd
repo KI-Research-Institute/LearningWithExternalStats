@@ -2,18 +2,22 @@
 % Please edit documentation in R/mseWeightOptimizer.R
 \name{optimizeSEWeightsTuned}
 \alias{optimizeSEWeightsTuned}
-\title{Optimization using minimum squered error criterion with initial tuning of the
+\title{Optimization using minimum squeread error criterion with initial tuning of the
 base learning rate.}
 \usage{
 optimizeSEWeightsTuned(wOptimizer, Z, mu)
 }
 \arguments{
-\item{mu}{}
+\item{wOptimizer}{optimizer object of type \code{seTunedWeightOptimizer}}
+
+\item{Z}{feature matrix}
+
+\item{mu}{external expectations vector}
 }
 \value{
 optimization results. A list
 }
 \description{
-Optimization using minimum squered error criterion with initial tuning of the
+Optimization using minimum squeread error criterion with initial tuning of the
 base learning rate.
 }

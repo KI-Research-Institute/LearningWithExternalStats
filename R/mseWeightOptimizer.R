@@ -1,23 +1,24 @@
-#' Optimization using minimum squared error criterion with initial tuning of the
+#' An optimizer that uses minimum squared error criterion with initial tuning of the
 #' base learning rate.
 #'
-#' @param alphas
-#' @param minSd
-#' @param w0
-#' @param nTuneIter
-#' @param nIter
-#' @param outputDir
-#' @param improveTh
-#' @param momentumC
-#' @param approxUpdate
-#' @param maxErr
+#' @param alphas a set of candidate beseline rates
+#' @param minSd minimum standard deviation of feature
+#' @param w0 initial weights vector, if NULL the weights will be initialized to uniform
+#' @param nTuneIter number of iterations for tunning
+#' @param nIter maximum number of iterations
+#' @param outputDir output directory for logging
+#' @param improveTh required accuracy
+#' @param momentumC momentum parameter
+#' @param approxUpdate using 1+x instead of exp(x), currently disabled
+#' @param maxErr alternative stopping criterion: error of the maximum statistic
+#' @param nesterov use nesterov momentum (boolean)
 #'
-#' @return an object of class seTunedWeightOptimizer
+#' @return an object of class \code{seTunedWeightOptimizer}
 #'
 #' @export
 seTunedWeightOptimizer <- function(
     alphas, minSd=1e-4, w0 = NULL,  nTuneIter=50, nIter=1000, outputDir=NULL, improveTh=1e-4, momentumC=0.9,
-    approxUpdate=F, maxErr=0.01)
+    approxUpdate=F, maxErr=0.01, nesterov=F)
 {
   l <- list(
     shortName = 'W-MSE',
@@ -33,7 +34,8 @@ seTunedWeightOptimizer <- function(
     approxUpdate = approxUpdate,
     optimize = optimizeSEWeightsTuned,
     setInitialValue = setInitialW,
-    maxErr = maxErr
+    maxErr = maxErr,
+    nesterov = nesterov
   )
   class(l) <- 'seTunedWeightOptimizer'
   return(l)
@@ -48,12 +50,12 @@ setInitialW <- function(wOptimizer, results) {
 
 
 
-#' Optimization using minimum squered error criterion with initial tuning of the
+#' Optimization using minimum squeread error criterion with initial tuning of the
 #' base learning rate.
 #'
-#' @param wOptimizer
-#' @param Z
-#' @param mu
+#' @param wOptimizer optimizer object of type \code{seTunedWeightOptimizer}
+#' @param Z feature matrix
+#' @param mu external expectations vector
 #'
 #' @return optimization results. A list
 #'
@@ -68,10 +70,12 @@ optimizeSEWeightsTuned <- function(wOptimizer, Z, mu)
     alpha = NULL,
     momentumC = wOptimizer$momentumC,
     approxUpdate = wOptimizer$approxUpdate,
-    maxErr = wOptimizer$maxErr
+    maxErr = wOptimizer$maxErr,
+    nesterov = wOptimizer$nesterov
   )
 
   o <- rep(NA, length(wOptimizer$alphas))
+  ws <- vector(mode = 'list', length = length(wOptimizer$alphas))
   for (i in 1:length(o)) {
     cOptimizer <- tOptimizer
     cOptimizer$alpha <- wOptimizer$alphas[i]
@@ -80,19 +84,24 @@ optimizeSEWeightsTuned <- function(wOptimizer, Z, mu)
     if (is.na(r$err))
       break
     o[i] <- r$err
+    w_hat <- r$w_hat
+    ws[[i]] <- w_hat/sum(w_hat)
   }
-  runId <- gsub(':', '-', Sys.time())
-  runPrefix = glue('optimizeSEWeightsTuned{runId}')
-  # png(filename = file.path(wOptimizer$outputDir, glue('{runPrefix} epsilon.png')))
-  # plot(wOptimizer$alphas, o, type='l', log='x', xlab = 'Alpha')
-  # dev.off()
 
+  if (nrow(Z)>1e5) {
+    runId <- gsub(':', '-', Sys.time())
+    runPrefix = glue('optimizeSEWeightsTuned{runId}')
+    png(filename = file.path(wOptimizer$outputDir, glue('{runPrefix} epsilon.png')))
+    plot(wOptimizer$alphas, o, type='l', log='x', xlab = 'Alpha')
+    dev.off()
+  }
 
   k <- which.min(o)
 
   fOptimizer <- tOptimizer
   fOptimizer$nIter <- wOptimizer$nIter
   fOptimizer$alpha <- wOptimizer$alphas[k]
+  fOptimizer$w0 <- ws[[k]]
   r <- fOptimizer$optimize(fOptimizer, Z, mu)
   gc()
   return(r)
@@ -102,7 +111,7 @@ optimizeSEWeightsTuned <- function(wOptimizer, Z, mu)
 
 seOptimizer <- function(
     minSd=1e-4, w0 = NULL,  nIter=1000, outputDir=NULL, improveTh=1e-4, alpha=0.1, momentumC=0.9, approxUpdate=F,
-    maxErr = 0.01)
+    maxErr = 0.01, nesterov=F)
 {
   l <- list(
     minSd = minSd,
@@ -114,7 +123,8 @@ seOptimizer <- function(
     momentumC=momentumC,
     approxUpdate = approxUpdate,
     maxErr = maxErr,
-    w0 = w0
+    w0 = w0,
+    nesterov = nesterov
   )
   class(l) <- 'seOptimizer'
   return(l)
@@ -125,10 +135,10 @@ seOptimizer <- function(
 
 optimizeSEWeights <- function(wOptimizer, Z, mu) {
 
-  # approxUpdate = wOptimizer$approxUpdate
+  # TODO deprecate approxUpdate = wOptimizer$approxUpdate
 
   alpha <- wOptimizer$alpha
-  cat('alpha =',alpha, '\n')
+  ParallelLogger::logInfo(glue('nesterov={wOptimizer$nesterov}'))
   n <- nrow(Z)
   m <- ncol(Z)
   Y <- Z[['Y']]
@@ -136,7 +146,6 @@ optimizeSEWeights <- function(wOptimizer, Z, mu) {
   v <- rep(0, n)
 
   normalized <- normalizeDataAndExpectations(Z, mu, wOptimizer$minSd)  # TODO
-  cat('optimizeSEWeights\n')
 
   maxIter <- wOptimizer$nIter
   l <- matrix(nrow = maxIter, ncol = 3)  # Optimization log
@@ -144,10 +153,19 @@ optimizeSEWeights <- function(wOptimizer, Z, mu) {
 
   if (!is.null(wOptimizer$w0)) {
     w <- wOptimizer$w0/sum(wOptimizer$w0)
-    ParallelLogger::logInfo(glue('Using initial w: sum={sum(w)}, sd={sd(w)}, n0- = {sum(w<=0)}'))
   }
   else
     w <- rep(1/n, n)  # Start with uniform weights
+
+  # a heuristic initialization that sets weights according to Y
+  idx1 <- Y==1
+  idx0 <- Y==0
+  n1 <- sum(idx1)
+  n0 <- sum(idx0)
+  w[idx1] <- (w[idx1]/sum(w[idx1])) * mu['Y']  # TODO show it bu mu['Y']
+  w[idx0] <- (w[idx0]/sum(w[idx0])) * (1-mu['Y'])
+  ParallelLogger::logInfo(glue('Using initial w: sum={sum(w)}, sd={sd(w)}, n0- = {sum(w<=0)}'))
+  # First iteration information
   muHat <- t(Z) %*% w  # estimated means
   rr <- muHat[ ,1] - mu
   err <- sum(rr**2)
@@ -160,16 +178,24 @@ optimizeSEWeights <- function(wOptimizer, Z, mu) {
   g <- Z %*% rr  # * 2  #
   for (i in 2:maxIter) {
 
-    g <- Z %*% rr  # * 2  #
-    v <- momentumC * v + (1-momentumC) * g
-    # if (approxUpdate) {
-    #   w <- w * (1 - alpha * v)
-    #   w[w <= 1e-9] <- 1e-9
-    # }
-    # else
-    w <- w * exp(- alpha * v)
-    w <- w/sum(w)
+    if (!wOptimizer$nesterov) {
+      g <- Z %*% rr  # ignoring factor 2
+      v <- momentumC * v + g
+      w <- w * exp(- alpha * v)
+      w <- w/sum(w)
 
+    } else {  # Nesterov momentum
+      # First advance by the momentum and then compute the gradient there
+      wbar <- w * exp(momentumC * v)
+      wbar <- wbar/sum(wbar)
+      muHat <- t(Z) %*% wbar
+      rr <- muHat[, 1] - mu
+      g <- Z %*% rr  # * 2  #
+
+      v <- momentumC * v - alpha * g
+      w <- w * exp(v)
+      w <- w/sum(w)
+    }
     muHat <- t(Z) %*% w
     rr <- muHat[, 1] - mu
     err <- sum(rr**2)
