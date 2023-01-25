@@ -8,35 +8,52 @@ library(LearningWithExternalStats)
 
 script_dir <- dirname(rstudioapi::getSourceEditorContext()$path)
 setwd(script_dir)
-source('./efesSimulationTests.R')
-source('./plotEfesSimulationResults.R')
+source('./offset-test.R')
 
-# Set output dir
+# cfg <- list(p=100, n=2000, outcomeOffsets=-log(c(2, 1)))
+cfg <-list(p=500, n=3e5, outcomeOffsets=-log(c(250)))
+# cfg <-list(p=1000, n=3e5, outcomeOffsets=-log(c(250)))
+nTest <- 2
+loadCached = T
 
-# In primal dual, batches should be large
 
-p <- 20  # 10 500
-n <- 3000  # 1e4 300000
-outcomeOffset <- -log(4)  # 4 250
-for (sigma_B_X_AH in c(0)) {  # Degree of proximity assumption violation
+getGeneralizationTestsParams <- function(outputDir) {
 
-  testParams <- getDefaultEfesTestParams(outputDir = 'D:/projects/robustness/high-dim-small')
-  testParams$sigma_B_Y_XA_factor <- 3
-  testParams$sigma_B_X_AH <- sigma_B_X_AH
-  testParams$loadCached = F  # load or train from scratch
-  testParams$n <- n
-  testParams$p <- p
-  testParams$ntop <- 500  # maximum number of features to re-weight on
-  testParams$outcomeOffset <- outcomeOffset
-  testParams$nTest <- 3
-  # testParams$estimationParams[[1]]$nTuneIter <- 10 # 10 is Too little with batch size of 1000
-  testParams$estimationParams[[1]]$batchSize <- 1000000
-  testParams$estimationParams[[1]]$polyBeta <- 0  # 0 is fixed step size for deterministic
-  # testParams$estimationParams[[1]]$nIter <- 1000
-  # testParams$estimationParams[[1]]$maxNuNorm <- 10
-  # testParams$estimationParams[[1]]$improveTh <- -1
-  # testParams$estimationParams[[1]]$nProbe <- 50
+  nrep <- 15
 
-  res <- repeatedTests(testParams)
-  plotHighDimResults(testParams)
+  esti  <- createExternalEstimatorSettings(
+    reweightAlgorithm = seTunedWeightOptimizer(outputDir=outputDir),
+    nRepetitions = nrep,
+    outputDir = outputDir,
+    maxCores = 15
+  )
+
+  estimationParams <- vector(mode = 'list', length = 1)
+  estimationParams[[1]] <- esti
+
+  testParams <- list(
+    n = NA,  # number of samples in train and tests sets
+    p = NA,  # number of features
+    binary = T, # type of covariates
+    ntop = 1000,  # number of features used in estimation of external performance
+    nTest = nTest,  # number of tests
+    # Simulation model
+    outcomeOffset = NA,  # offset of the outcome logistic model, determines outcome prevalence
+    sigma_B_X_AH = NA,  # degree of porximity assumption violation
+    sigma_B_Y_X_factor = 4,
+    sigma_B_Y_XA_factor = 4,
+    loadCached = F,  # load or train from scratch
+    envOffset = 5,
+    # Estimation model
+    trainer = wglmnet(),  # wXGBoost()
+    outputDir = outputDir,
+    # Reweighing parameters
+    estimationParams = estimationParams
+  )
+  return(testParams)
 }
+
+
+testParams <- getGeneralizationTestsParams(outputDir = glue('D:/projects/robustness/offset-test-{cfg$n}-{cfg$p}'))
+
+proximityAndOffsetTests(cfg, testParams, nTest, loadCached)  # TODO why is there a duplication in nTest?

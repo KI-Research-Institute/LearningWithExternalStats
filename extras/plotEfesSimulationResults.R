@@ -53,6 +53,7 @@ plotPropoertiesBox <- function(outputDir, testname, legendLabels) {
     plotPropertyBox(outputDir, testname, legendLabels, p)
 }
 
+
 plotPropertyBox <- function(outputDir, testname, legendLabels, p) {
 
   r = read.csv(file.path(outputDir, glue('{testname}.csv')))

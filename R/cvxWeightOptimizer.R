@@ -107,7 +107,11 @@ optimizeWeightCVX <- function(wOptimizer, Z, mu) {
   w_hat <- reweightByMeans(
     Z, mu, divergence = wOptimizer$divergence, lambda = wOptimizer$lambda, minSd = wOptimizer$minSd, minW = 0,
     solver='ECOS', verbose = T, optimizationMethod = wOptimizer$optimizationMethod)
-  r <- list(w_hat=w_hat)
+  if (any(is.na(w_hat)))
+    status = 'Failure'
+  else
+    status = 'Success'
+  r <- list(w_hat = w_hat, status = status)
   return(r)
 }
 

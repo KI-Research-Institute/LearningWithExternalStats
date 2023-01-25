@@ -16,7 +16,7 @@ loadCached = T
 
 getGeneralizationTestsParams <- function(outputDir) {
 
-  alphas <- c(0.1, 0.2, 0.5)
+  alphas <- c(0.01, 0.03, 0.1, 0.3, 0.5)
 
   nrep <- 100
   nMaxReweight <- 20000 # Need to check if more samples lead to faster convergence
@@ -31,20 +31,21 @@ getGeneralizationTestsParams <- function(outputDir) {
     maxCores = 15
   )
 
-  threshold <- 1e-4
   estimationParams <- vector(mode = 'list', length = 2)
+  # estimationParams[[1]] <- cvxAlg
+  threshold <- 1e-4
   esti <- cvxAlg
   esti$shortName <- 'Baseline'
   esti$reweightAlgorithm <-
     seTunedWeightOptimizer(
-      alphas = alphas, outputDir=outputDir, improveTh = threshold, maxErr = 1, nIter = 1000, nTuneIter=50)
+      alphas = alphas, outputDir=outputDir, improveTh = threshold, maxErr = 1, nIter = 500, nTuneIter=25)
   estimationParams[[1]] <- esti
   esti <- cvxAlg
-  esti$shortName <- 'Warm 10/200'
+  esti$shortName <- 'Warm 10/100'
   esti$reweightAlgorithm <- seTunedWeightOptimizer(
-    alphas = alphas, outputDir=outputDir, improveTh = threshold, maxErr = 1, nIter = 1000, nTuneIter=50)
+    alphas = alphas, outputDir=outputDir, improveTh = threshold, maxErr = 1, nIter = 500, nTuneIter=25)
   esti$warmStartAlgorithm <- seTunedWeightOptimizer(
-    alphas = alphas, outputDir=outputDir, improveTh = threshold, maxErr = 1, nIter = 200, nTuneIter=10)
+    alphas = alphas, outputDir=outputDir, improveTh = threshold, maxErr = 1, nIter = 100, nTuneIter=5)
   estimationParams[[2]] <- esti
 
   minW <- 0  # minimum weight
@@ -54,7 +55,7 @@ getGeneralizationTestsParams <- function(outputDir) {
     p = NA,  # number of features
     binary = T, # type of covariates
     ntop = 1000,  # number of features used in estimation of external performance
-    nTest = 20,  # number of tests
+    nTest = nTest,  # number of tests
     # Simulation model
     outcomeOffset = NA,  # offset of the outcome logistic model, determines outcome prevalence
     sigma_B_X_AH = 0,  # degree of porximity assumption violation
@@ -74,4 +75,4 @@ getGeneralizationTestsParams <- function(outputDir) {
 
 testParams <- getGeneralizationTestsParams(outputDir = glue('D:/projects/robustness/offset-test-{cfg$n}-{cfg$p}'))
 
-proximityAndOffsetTests(cfg, testParams, nTest, loadCached)
+proximityAndOffsetTests(cfg, testParams, nTest, loadCached)  # TODO why is there a duplication in nTest?

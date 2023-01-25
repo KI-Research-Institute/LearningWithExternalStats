@@ -131,6 +131,7 @@ estimateExternalPerformanceFromStatistics <- function(
   if (preD$status != 'Success') {
     ParallelLogger::logError(glue('Pre-balancing diagnosis status = {preD$status}'))
     result$status <- 'Failure'
+    result$estimationTime <- NA
     return(result)
   }
   # Maintain features and samples according to pre-diagnostic evaluations
@@ -139,7 +140,7 @@ estimateExternalPerformanceFromStatistics <- function(
   internalData$y <- internalData$y[preD$zidx]
   internalData$p <- internalData$p[preD$zidx]
   # Initialize sub-samples
-  n <- sum(preD$zidx)
+  n <- sum(preD$zidx)  # TODO CHANGE TO NROWS(Z)
   nSubsets <- externalEstimatorSettings$nRepetitions
   if (externalEstimatorSettings$nMaxReweight < n*0.75)  { # TODO figure this out
     if (externalEstimatorSettings$stratified)
@@ -171,7 +172,7 @@ estimateExternalPerformanceFromStatistics <- function(
     return(result)
   }
   meanResults <- colMeans(resultsMatrix, na.rm = T)
-  if (is.null(meanResults)) {
+  if (all(is.na(meanResults))) {
     result$status = 'Failure'
     return(result)
   }
@@ -341,7 +342,7 @@ stratifiedSizes <- function(n, nmax, Y) {
 
 stratifiedSplitToRandomSubsets <- function(s) {
   # Replace is TRUE by default because the smaller set may not suffice to give different subset
-  ParallelLogger::logInfo(glue('n0={s$n0}, n1={s$n1}, nmaxs1={s$nmaxs[1]}, nmaxs2={s$nmaxs[2]}'))
+  # ParallelLogger::logInfo(glue('n0={s$n0}, n1={s$n1}, nmaxs1={s$nmaxs[1]}, nmaxs2={s$nmaxs[2]}'))
   idxs <- c(s$idxs0[sample(s$n0, s$nmaxs[1], replace = T)], s$idxs1[sample(s$n1, s$nmaxs[2], replace = T)]) # TODO examine
   return(idxs)
 }
@@ -370,7 +371,7 @@ estimateFullSetPerformance <- function(internalData, externalStats, estimationPa
   nZ <- nrow(internalData$z)
   pZ <- ncol(internalData$z)
   pa <- estimationParams
-  ParallelLogger::logInfo(glue('Reweighting data dimensions: n={nZ}, p={pZ}'))
+  # ParallelLogger::logInfo(glue('Reweighting data dimensions: n={nZ}, p={pZ}'))
   # ParallelLogger::logInfo(
   #   glue('Parameters: {pa$divergence}, lambda={pa$lambda}, distance={pa$distance}, {pa$optimizationMethod}'))
 
@@ -386,7 +387,7 @@ estimateFullSetPerformance <- function(internalData, externalStats, estimationPa
   wOptimizer <- pa$reweightAlgorithm
   reweightResults <- wOptimizer$optimize(wOptimizer, internalData$z, externalStats)
   dbRes[['Opt err']] <- reweightResults$err
-  dbRes[['n iter']] <- nrow(reweightResults$log)
+  dbRes[['n iter']] <- reweightResults$totalIter
 
   # TODO make this optional
   if (F) {
@@ -399,8 +400,8 @@ estimateFullSetPerformance <- function(internalData, externalStats, estimationPa
     }
   }
 
-  w <- reweightResults$w
-  if (sum(is.na(w))==0) {
+  w <- reweightResults$w_hat
+  if (reweightResults$status == 'Success' && sum(is.na(w))==0) {
     widx <- w>0
     dbRes[['n']] <- sum(widx)
     if (is.factor(internalData$y)) # TODO is this the right place
@@ -414,233 +415,9 @@ estimateFullSetPerformance <- function(internalData, externalStats, estimationPa
     dbRes <- c(dbRes, m)
     return (list(dbRes=(unlist(dbRes)), reweightResults=reweightResults))
   } else {
-    ParallelLogger::logWarn('w contains NA')
+    ParallelLogger::logWarn('Optimizer failed or w contains NA')
     return (NULL)
   }
-}
-
-
-checkVariableNamesOverlap <- function(z, mu) {
-  zMinusMu <- !colnames(z) %in% names(mu)
-  n <- sum(zMinusMu)
-  if (n>0) {
-    ParallelLogger::logInfo(glue('{n} variables are in z but not in mu'))
-    missingVars <- colnames(z)[zMinusMu]
-    for (i in 1:n)
-      ParallelLogger::logInfo(glue('{missingVars[i]} is in z but not in mu'))
-  }
-  muMinusZ <- !names(mu) %in% colnames(z)
-  n <- sum(muMinusZ)
-  if (n>0) {
-    ParallelLogger::logInfo(glue('{n} variables are in mu but not in z'))
-    missingVars <- names(mu)[muMinusZ]
-    for (i in 1:n)
-      ParallelLogger::logInfo(glue('{missingVars[i]} is in mu but not in z'))
-  }
-  muIntersection <- !muMinusZ
-  if (sum(muIntersection)<2)
-    ParallelLogger::logFatal(glue('z and mu have only {sum(muIntersection)} overlapping variable names'))
-  return(muIntersection)
-}
-
-
-
-#' Pre re-weighting diagnostics
-#'
-#' @description compare external expectations and internal means before reweighting
-#'
-#' @param z a data frame of transformed feature-outcome pairs
-#' @param mu a vector of means of transformed feature-outcome pairs
-#' @param maxDiff maximum difference from which to check max prop
-#' @param npMinRatio minimum ratio between number of features and number of examples
-#'
-#' @return a named list with the following fields:
-#' ...
-#'
-#' @export
-preDiagnostics <- function(z, mu, maxDiff, npMinRatio = 4) {
-  nInput <- nrow(z)
-  pInput <- ncol(z)
-
-  muIntersection <- checkVariableNamesOverlap(z, mu)
-
-  naInZ <- any(is.na(z))
-  if (naInZ) {
-    ParallelLogger::logError("Data set has na entries, cannot reweight")
-    return(list(status='Failure'))  # Do we need this
-  }
-  # remove features with Na entries in table1
-  naInMu <- is.na(mu)
-  if (any(naInMu)) {
-    ParallelLogger::logError("Expectation vector has na entries, cannot reweight")
-    return(list(status='Failure'))  # Do we need this
-  }
-  includeFeatures <- (!naInMu) & muIntersection
-  # Regardless of Na status in mu, perform other tests
-  binaryResults <- preCheckBinaryFeatures(z, mu, includeFeatures, maxDiff)
-  unaryResults <- preCheckUnaryFeatures(z, mu, binaryResults, maxUnaryDiff = maxDiff)
-  includeFeatures <- unaryResults$includeFeatures
-
-  representedFeatures <- names(mu[includeFeatures])
-  # Check range of variables with >1 values
-  numericFeatureIndicators <- apply(z, 2, function(c) {length(unique(c))>1})
-  numericFeatureIndicators <- numericFeatureIndicators & includeFeatures
-  muR <- mu[numericFeatureIndicators]
-  zR <- z[binaryResults$zidx, numericFeatureIndicators]  # TODO - should we limit to zidx?
-  inRangeTol <- maxDiff  # TODO should we use a different param?
-  inRange <- (muR >= apply(zR, 2, min)-maxDiff) & (muR <= apply(zR, 2, max)+maxDiff)
-  outOfRange <- names(muR)[!inRange]
-  if (length(outOfRange) > 0) {
-    ParallelLogger::logError('Out of range variables:')
-    for (f in outOfRange)
-      ParallelLogger::logError(glue('{f}, mu={muR[f]}, min={min(zR[,f])}, max={max(zR[ ,f])}'))
-  }
-  # few samples
-  fewSamples = sum(binaryResults$zidx)/length(representedFeatures) < npMinRatio
-  if (fewSamples) {
-    ParallelLogger::logError(glue("Few samples n={sum(binaryResults$zidx)}, p={length(representedFeatures)}"))
-  }
-
-  status = 'Success'
-  if ( length(outOfRange) > 0 || unaryResults$incompatableUnaryVariable || fewSamples
-       # || length(binaryResults$highlySkewedBinary)>0
-       # || length(unaryResults$unaryFeatures) > 0
-  )
-    status = 'Failure'
-  ParallelLogger::logInfo(glue('Pre-evaluation diagnosis status = {status}'))
-  return (list(
-    outOfRange = outOfRange,
-    representedFeatures=representedFeatures,
-    zidx = binaryResults$zidx,
-    unaryFeatures = unaryResults$unaryFeatures,
-    incompatableUnaryVariable = unaryResults$incompatableUnaryVariable,
-    highlySkewedBinary=binaryResults$highlySkewedBinary,
-    status = status
-    ))
-}
-
-
-preCheckBinaryFeatures <- function(z, mu, includeFeatures, maxDiff) {
-  n1 <- nrow(z)
-  binaryFeatureIndicators <- apply(z, 2, function(c) {length(unique(c))==2})
-  binaryFeatureIndicators <- binaryFeatureIndicators & includeFeatures
-  # Identify feature that has a single value in the external dataset and the corresponding sub-population in the
-  # internal one
-  binaryFeatures <- names(mu[binaryFeatureIndicators])
-  zidx <- rep(TRUE, n1)
-  for (f in binaryFeatures) {
-    vals <- unique(z[,f])
-    for (val in vals) {
-      if (mu[f]==val) {
-        ParallelLogger::logInfo(glue('Removing subjects in which binary {f} != {val} and mu == {val}'))
-        zidx <- zidx & (z[ , f]==val)
-        includeFeatures[f] <- F
-        ParallelLogger::logInfo(glue('Maintained {sum(zidx)}/{n1} subjects and {sum(includeFeatures)} features.\n'))
-      }
-    }
-  }
-  includeBinaryFeatures <- binaryFeatureIndicators & includeFeatures
-  binaryFeatures <- names(mu[includeBinaryFeatures])
-  ParallelLogger::logInfo(glue('z has {length(binaryFeatures)} binary features'))
-  highlySkewedBinary <- getHighlySkewedBinaryFeatures(mu[binaryFeatures], z[zidx, binaryFeatures], maxDiff)
-  return(list(includeFeatures=includeFeatures, zidx = zidx, highlySkewedBinary=highlySkewedBinary))
-}
-
-
-varProxy <- function(n, n1, muExt) {
-  n0 <- n-n1
-  return( ((1-muExt)**2)/n0 + (muExt**2)/n1 )
-}
-
-
-# TODO compare with the version used in the Stroke use-case
-#' Get highly skewed binary features
-#'
-#' Assuming that if the max proportion is violated than the expectations may be small and therefore checking also
-#' maxDiff
-#'
-#' @param mu expectations
-#' @param z data
-#' @param maxDiff max difference from with to check max proportion
-#'
-getHighlySkewedBinaryFeatures <- function(mu, z, maxDiff) {
-  imbalanced <- rep(F, length(mu))
-  propM <- rep(NA, length(mu))
-  n1s <- rep(NA, length(mu))
-  varProxies <- rep(NA, length(mu))
-
-  if (!is.vector(z)) {
-    n <- nrow(z)
-    meanz <- colMeans(z)
-    for (i in 1:(length(mu))) {
-      minzi <- min(z[ , i])
-      maxzi <- max(z[ , i])
-      n1s[i] <- sum(z[ , i] == maxzi)
-      propM[i] <- abs((mu[i]-minzi)/(meanz[i]-minzi))
-      varProxies[i] <- varProxy(n, n1s[i], (mu[i]-minzi)/(maxzi-minzi))
-      imbalanced[i] <- varProxies[i] > 0.001
-    }
-  }
-  else {
-    n <- length(z)
-    meanz <- mean(z)
-    minz <- min(z)
-    maxz <- max(z)
-    n1 <- sum(z==maxz)
-    propM[1] <- abs((mu[1]-minz)/(meanz-minz))
-    varProxies[1] <- varProxy(n, n1, (mu[1]-minz)/(maxz-minz))
-    imbalanced[1] <- varProxies[1] > 0.001
-  }
-  skewedNames <- names(mu[imbalanced])
-  if (sum(imbalanced) > 0) {
-    reportDf <- data.frame(matrix(ncol=3, nrow=sum(imbalanced)))
-    rownames(reportDf) <- names(mu[imbalanced])
-    colnames(reportDf) <- c('Int', 'Ext', 'Prop')
-    reportDf[[1]] <- meanz[imbalanced]
-    reportDf[[2]] <- mu[imbalanced]
-    reportDf[[3]] <- propM[imbalanced]
-    # print(reportDf)
-    for (i in which(imbalanced)) {
-      f <- names(mu)[i]
-      smean <- format(meanz[i], digits=3)
-      smu <- format(mu[i], digits=3)
-      spropM <- format(propM[i], digits=3)
-      sv <-format(varProxies[i], digits=3)
-      ParallelLogger::logWarn(glue('Skewed feature {f}: n={n} n1={n1s[i]} mean={smean} mu={smu} r={spropM} var proxy={sv}'))
-    }
-  }
-  return(skewedNames)
-}
-
-
-
-preCheckUnaryFeatures <- function(z, mu, results, maxUnaryDiff=0.01) {
-  n1 <- nrow(z)
-  includeFeatures <- results$includeFeatures
-  unaryFeatures <- apply(z, 2, function(c) {length(unique(c))==1})
-  unaryFeatures <- unaryFeatures & includeFeatures
-  featureNames <- names(mu)
-
-  incompatableUnaryVariable <- F
-  nUnary <-sum(unaryFeatures)
-  if (nUnary>0) {
-    for (f in (featureNames[unaryFeatures]))
-      ParallelLogger::logInfo(glue("Found unary feature {f}"))
-    if (nUnary>1)
-      badUnary <- abs(colMeans(z[, unaryFeatures])-mu[unaryFeatures]) > maxUnaryDiff  # TODO consider sample size
-    else
-      badUnary <- abs(mean(z[, unaryFeatures])-mu[unaryFeatures]) > maxUnaryDiff
-    if (any(badUnary)) {
-        incompatableUnaryVariable <- T
-        for (f in (featureNames[unaryFeatures][badUnary]))
-          ParallelLogger::logError(glue('Bad unary feature {f}, internal={mean(z[ ,f])}, external={mu[f]}'))
-    }
-    includeFeatures <- includeFeatures & !unaryFeatures
-  }
-  return(list(
-    includeFeatures=includeFeatures,
-    incompatableUnaryVariable = incompatableUnaryVariable,
-    unaryFeatures = featureNames[unaryFeatures]))
 }
 
 
@@ -688,40 +465,6 @@ summarizeBootstrap <- function(b) {
 }
 
 
-#' Post reweighing diagnostics
-#'
-#' @description compute diagnostics of weighted samples
-#'
-#'
-#' @param w a vector of weights
-#' @param z a data frame of transformed feature-outcome pairs
-#' @param mu a vector of means of transformed feature-outcome pairs
-#'
-#' @return a named list with the following:
-#' \itemize{
-#' \item {\code{Max weight}:} {Maximal weight}
-#' \item {\code{chi2ToUnif}:} {Chi squared divergence between weights and a uniform distribution}
-#' \item {\code{kl}:} {KL distance to uniform distribution}
-#' \item {\code{Max Weighted SMD}:} {Maximum over features of SMD between internal set and external statistics}
-#' }
-#'
-#' @export
-postDiagnostics <- function(w, z, mu) {
-  n <- length(w)
-  p <- w/sum(w)
-  klIdx <- p>0
-  kl <- log(n) + as.numeric(t(p[klIdx]) %*% log(p[klIdx]))
-  chi2ToUnif <- n*sum((p-1/n)**2)  #  = \sum(p-1/n)^2/1/n
-  maxWeightedSMD <- computeMaxSMD(mu, z, p)
-
-  diagnostics <- list(
-    'Max weight'=max(w),
-    'chi2 to uniform' = chi2ToUnif,
-    kl = kl,
-    'Max Weighted SMD' = maxWeightedSMD)  # TODO add diagnostics
-  ParallelLogger::logInfo(glue("Max weighted SMD = {maxWeightedSMD}"))
-  return(diagnostics)
-}
 
 
 #' Get performance measures

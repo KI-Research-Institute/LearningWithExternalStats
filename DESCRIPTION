@@ -17,17 +17,19 @@ Imports:
     stats,
     WeightedROC
 Suggests:
-	knitr,
+    knitr,
     rmarkdown,
-	glmnet,
-	Matrix,
-	Rmpfr,
-	dbplyr,
-	Eunomia,
-	FeatureExtraction,
-	PatientLevelPrediction,
-	plpDataAdapter
+    glmnet,
+    Matrix,
+    Rmpfr,
+    dbplyr,
+    Eunomia,
+    FeatureExtraction,
+    PatientLevelPrediction,
+    plpDataAdapter,
+    testthat (>= 3.0.0)
 VignetteBuilder: knitr
 Depends: 
     R (>= 2.10)
 LazyData: true
+Config/testthat/edition: 3
