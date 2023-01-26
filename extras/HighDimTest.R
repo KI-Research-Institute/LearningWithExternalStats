@@ -10,8 +10,9 @@ script_dir <- dirname(rstudioapi::getSourceEditorContext()$path)
 setwd(script_dir)
 source('./offset-test.R')
 
-# cfg <- list(p=100, n=2000, outcomeOffsets=-log(c(2, 1)))
-cfg <-list(p=500, n=3e5, outcomeOffsets=-log(c(250)))
+# cfg <- list(p=100, n=2000, outcomeOffsets=-log(c(2)))  # 1
+# cfg <- list(p=100, n=5000, outcomeOffsets=-log(c(2)))  # 1
+cfg <-list(p=500, n=3e5, outcomeOffsets=-log(c(250)))  # 16
 # cfg <-list(p=1000, n=3e5, outcomeOffsets=-log(c(250)))
 nTest <- 10
 loadCached = T

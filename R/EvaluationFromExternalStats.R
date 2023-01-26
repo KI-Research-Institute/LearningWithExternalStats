@@ -181,7 +181,8 @@ estimateExternalPerformanceFromStatistics <- function(
   # Process post diagnostic information
   # TODO add a post diagnostic that measures 'effective sample size'
   result$status <- checkWsmdStatus(resultsMatrix, meanResults, externalEstimatorSettings)
-  result$estimation = data.frame(value=unlist(c(list(as.list(meanResults), as.list(s)))))
+  if (result$status == 'Success')
+    result$estimation = data.frame(value=unlist(c(list(as.list(meanResults), as.list(s)))))
   return(result)
 }
 
@@ -246,8 +247,8 @@ checkWsmdStatus <- function(resultsMatrix, meanResults, externalEstimatorSetting
     ParallelLogger::logError('Max weighted SMD is NULL or Na')
     status = 'NULL-WSMD'
   } else {
-    for (i in 1:nrow(resultsMatrix))
-      ParallelLogger::logInfo(glue("Max weighted SMD {i} {resultsMatrix[i, 'Max Weighted SMD']}"))
+    # for (i in 1:nrow(resultsMatrix))
+    #   ParallelLogger::logInfo(glue("Max weighted SMD {i} {resultsMatrix[i, 'Max Weighted SMD']}"))
     if (maxWSMD > externalEstimatorSettings$maxWSMD) {
       ParallelLogger::logError(glue('Max weighted SMD = {maxWSMD} (Th={externalEstimatorSettings$maxWSMD})'))
       status = 'Large-WSMD'

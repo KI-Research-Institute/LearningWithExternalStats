@@ -59,13 +59,16 @@ preDiagnostics <- function(z, mu, maxDiff, npMinRatio = 4) {
     ParallelLogger::logWarn(glue("Few samples n={sum(binaryResults$zidx)}, p={length(representedFeatures)}"))
   }
 
-  status = 'Success'
   if ( length(outOfRange) > 0 || unaryResults$incompatableUnaryVariable || fewSamples
        || length(binaryResults$highlySkewedBinary)>0
        # || length(unaryResults$unaryFeatures) > 0
-  )
+  ) {
     status = 'Failure'
-  ParallelLogger::logInfo(glue('Pre-evaluation diagnosis status = {status}'))
+    ParallelLogger::logWarn(glue('Pre-evaluation diagnosis status = {status}'))
+  } else {
+    status = 'Success'
+    ParallelLogger::logInfo(glue('Pre-evaluation diagnosis status = {status}'))
+  }
   return (list(
     outOfRange = outOfRange,
     representedFeatures=representedFeatures,
@@ -168,8 +171,10 @@ getHighlySkewedBinaryFeatures <- function(mu, z, minNumReport=20, maxDiff=0.01) 
         n1sStr <- glue('={n1s[i]}')
         meanStr <- glue('={format(meanz[i], digits=3)}')
       }
-      if (mu[i] < maxDiff)  # in this case both mu and n1 are small
+      if (mu[i] < maxDiff)  { # in this case both mu and n1 are small
         includeFeatures[i] <- F
+        ParallelLogger::logInfo(glue('Removing nearly-unary feature {f}: n={n} n1{n1sStr} mean{meanStr} mu={smu}'))
+      }
       else
         ParallelLogger::logWarn(glue('Skewed feature {f}: n={n} n1{n1sStr} mean{meanStr} mu={smu}'))
     }
