@@ -18,19 +18,36 @@ computeMaxSMD <- function(mu, Z, w=NULL) {
   p <- length(colSets)
   n <- nrow(Z)
   d <- vector(mode = 'numeric', length = p)
-  d[1] <- binaryVarSMD(mu[[1]], Z[ ,1], w)
-  for (i in 2:p) {
+  for (i in 1:p) {
     vars <- colSets[[i]]
     if (length(vars) == 2)
       d[i] <- continuousVarSMD(mu[vars], Z[,vars], w)
     else {
-      if (length(vars) == 1)
-        d[i] <- binaryVarSMD(mu[vars], Z[,vars], w)
+      if (length(vars) == 1) {
+        Zi <- Z[,vars]
+        vals <- unique(Zi)
+        if (length(vals)==2)
+          d[i] <- binaryVarSMD(mu[vars], Zi, w)
+        else {  # Assuming equal variances
+          meanZi <- t(Zi) %*% w
+          meanZi2 <- t(Zi**2) %*% w
+          if (meanZi2 > meanZi)
+            d[i] <- abs(meanZi-mu[vars])/sqrt(2*(meanZi2-meanZi))
+          else {
+            if (meanZi2==meanZi) {
+              ParallelLogger::logInfo(glue('{vars} has {length(vals)} values'))
+              d[i] <- abs(meanZi-mu[vars])/sqrt(0.001) # Trimming variance at 0.001
+            } else {
+              ParallelLogger::logWarn(glue('Bad variance {meanZi2-meanZi}'))
+            }
+          }
+        }
+      }
       else {
-        cat(glue('n column sets={p}, p={length(mu)}'), '\n')
-        cat('Column set variables', vars, '\n')
-        warning(glue('Column set {i}, size not fit for SMD'), immediate. = T)
-        warning(glue('Column set {i}, size not fit for SMD'))
+        if (length(vars) == 0)
+          ParallelLogger::logWarn(glue('Column set {i}, size 0 not fit for SMD'))  # TODO check specific cases
+        else
+          ParallelLogger::logWarn(glue('Column set {i}, size {length(vars)} not fit for SMD v1={vars[1]}'))
       }
     }
   }
@@ -38,16 +55,31 @@ computeMaxSMD <- function(mu, Z, w=NULL) {
 }
 
 
-
 # TODO the following function relies on assumptions
 binaryVarSMD <- function(m0, Z, w=NULL) {
+
+  minZ <- min(Z)
+  maxZ <- max(Z)
+  if (m0<minZ || m0>maxZ) {
+    ParallelLogger::logWarn(glue('Stat {m0} is out of range {minZ}-{maxZ}'))
+    return(Inf)
+  }
   if (is.null(w))
     m1 <- mean(Z)
   else
     m1 <- t(Z) %*% w
-  v0 <- m0*(1-m0)
-  v1 <- m0*(1-m0)
+  diffZ <- maxZ-minZ
+  p1 <- (m1-minZ)/diffZ
+  p0 <- (m0-minZ)/diffZ
+
+  v0 <- p0*(1-p0)*diffZ
+  v1 <- p1*(1-p1)*diffZ
+
+  if (v1 <= 0 || v0 <= 0)
+    ParallelLogger::logInfo(glue('m0={m0} m1={m1} diffZ={diffZ}'))
+
   return(abs(m1-m0)/sqrt(v0+v1))
+
 }
 
 
@@ -73,7 +105,7 @@ extractInteractionColumnSets <- function(featureNames) {
   covariates <- mainVars[mainVars!='Y']
   p <- length(covariates)
   # TODO - make this more efficient
-  colSets <- list(list(c('Y')))
+  colSets <- list(c('Y'))
   for (i in 1:p) {
     currentVar <- covariates[i]
     idxs <- sapply(featureNames, function(x) (startsWith(x, paste(currentVar, '_', sep='') )) )

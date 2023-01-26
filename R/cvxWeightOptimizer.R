@@ -72,6 +72,51 @@ reweightByMeans <- function(
 }
 
 
+
+#' @title a reweighting object.
+#'
+#' @description a wrapper for CVX base weight optimizer
+#'
+#' @param divergence 'entropy' or 'chi2'.
+#' 'entropy' directs the algorithm to minimize the negative entropy,
+#' \eqn{-\sum_i w_i \log w_i}.
+#' 'chi2' is \eqn{\sum_i{w_i-\frac{1}{n}}**2}
+#' @param lambda lambda - regularization parameter
+#' @param minSd minimum variance for a columns to be included
+#' @param optimizationMethod primal or dual. Currently dual works only with entropy divergence
+#'
+#' @return
+#' An object of class cvxWeightOptimizer
+#'
+#' @export
+cvxWeightOptimizer <- function(lambda=1e-1, minSd=1e-4, divergence = 'entropy', optimizationMethod = 'dual') {
+  l <- list(
+    shortName = 'CVX',
+    lambda=lambda,
+    minSd=minSd,
+    divergence = divergence,
+    optimizationMethod = optimizationMethod,
+    optimize=optimizeWeightCVX
+  )
+  class(l) <- 'cvxWeightOptimizer'
+  return(l)
+}
+
+
+optimizeWeightCVX <- function(wOptimizer, Z, mu) {
+  w_hat <- reweightByMeans(
+    Z, mu, divergence = wOptimizer$divergence, lambda = wOptimizer$lambda, minSd = wOptimizer$minSd, minW = 0,
+    solver='ECOS', verbose = T, optimizationMethod = wOptimizer$optimizationMethod)
+  if (any(is.na(w_hat)))
+    status = 'Failure'
+  else
+    status = 'Success'
+  r <- list(w_hat = w_hat, status = status)
+  return(r)
+}
+
+
+
 #' Reweight an internal database to match the means of an external via solving a corresponding optimization problem.
 #'
 #' @description
@@ -217,6 +262,7 @@ dualReweightByMeans <- function(Z, mu, lambda, minSd, minW, solver, verbose) {
 #' @return
 #' list
 #'
+#' @export
 normalizeDataAndExpectations <- function(Z, mu, minSd) {
   # Preprocess and filter columns with low variance
   muZ <- colMeans(Z)

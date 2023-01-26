@@ -5,39 +5,21 @@
 \title{Create settings for \code{estimateExternalPerformanceFromStatistics}}
 \usage{
 createExternalEstimatorSettings(
-  divergence = "entropy",
-  lambda = 1e-06,
-  minSd = 1e-04,
-  minW = 1e-06,
-  distance = "l2",
-  optimizationMethod = "primal",
-  solver = "ECOS",
-  nMaxReweight = 10000,
+  reweightAlgorithm,
+  nMaxReweight = 20000,
   nRepetitions = 1,
   stratifiedSampling = T,
-  maxProp = 500,
   maxDiff = 0.01,
   maxWSMD = 0.2,
   outputDir = getwd(),
-  maxCores = 1
+  maxCores = 1,
+  shortName = NULL,
+  warmStartAlgorithm = NULL
 )
 }
 \arguments{
-\item{divergence}{'entropy' or 'chi2'.
-'entropy' directs the algorithm to minimize the negative entropy, \eqn{\sum_i w_i \log w_i}.
-'chi2' is \eqn{\sum_i(w_i-\frac{1}{n})^2}}
-
-\item{lambda}{lambda - regularization parameter}
-
-\item{minSd}{minimum variance for a columns to be included}
-
-\item{minW}{minimum weight}
-
-\item{distance}{distance between mean vectors, l1 or l2}
-
-\item{optimizationMethod}{primal or dual. Currently dual works only with entropy divergence}
-
-\item{solver}{solver ("ECOS" "ECOS_BB" "SCS" "OSQP")}
+\item{reweightAlgorithm}{algorithm that attempts to reweight an internal sample to get similar expectations from an
+external one}
 
 \item{nMaxReweight}{maximum number of samples for re-weighting. If this number is smaller than the number of
 observations, then the estimator acts on sub-samples of the data-set.}
@@ -45,8 +27,6 @@ observations, then the estimator acts on sub-samples of the data-set.}
 \item{nRepetitions}{number of repetitions with sub-samples.}
 
 \item{stratifiedSampling}{attempt to sample a balanced number of samples for both outcome groups.}
-
-\item{maxProp}{maximum proportion between external and internal means.}
 
 \item{maxDiff}{maximum difference between  external and internal fequencies in case of unary variables or
 binary variables with high proportion.}
@@ -56,9 +36,15 @@ binary variables with high proportion.}
 \item{outputDir}{output directory for logging}
 
 \item{maxCores}{maximum number of cores for parallel processing of multiple sub-samples.}
+
+\item{shortName}{a short name for display puposes}
+
+\item{warmStartAlgorithm}{algorithm for intialization of weights before bootstrapping}
 }
 \value{
 An object of class \code{externalEstimatorSettings}
+
+TODO update this
 }
 \description{
 evaluation from external stats

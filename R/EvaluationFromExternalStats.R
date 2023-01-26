@@ -9,64 +9,52 @@ NULL
 
 #' @title Create settings for \code{estimateExternalPerformanceFromStatistics}
 #'
-#' @param divergence 'entropy' or 'chi2'.
-#' 'entropy' directs the algorithm to minimize the negative entropy, \eqn{\sum_i w_i \log w_i}.
-#' 'chi2' is \eqn{\sum_i(w_i-\frac{1}{n})^2}
-#' @param lambda lambda - regularization parameter
-#' @param minSd minimum variance for a columns to be included
-#' @param minW minimum weight
-#' @param distance distance between mean vectors, l1 or l2
-#' @param optimizationMethod primal or dual. Currently dual works only with entropy divergence
-#' @param solver solver ("ECOS" "ECOS_BB" "SCS" "OSQP")
+#' @param reweightAlgorithm algorithm that attempts to reweight an internal sample to get similar expectations from an
+#' external one
 #' @param nMaxReweight maximum number of samples for re-weighting. If this number is smaller than the number of
 #' observations, then the estimator acts on sub-samples of the data-set.
 #' @param nRepetitions number of repetitions with sub-samples.
 #' @param stratifiedSampling attempt to sample a balanced number of samples for both outcome groups.
-#' @param maxProp maximum proportion between external and internal means.
 #' @param maxDiff maximum difference between  external and internal fequencies in case of unary variables or
 #' binary variables with high proportion.
 #' @param maxWSMD maximum allowed weighted standardized mean difference
 #' @param outputDir output directory for logging
 #' @param maxCores maximum number of cores for parallel processing of multiple sub-samples.
+#' @param shortName a short name for display puposes
+#' @param warmStartAlgorithm algorithm for intialization of weights before bootstrapping
 #'
 #' @return
 #' An object of class \code{externalEstimatorSettings}
 #'
+#' TODO update this
+#'
 #' @export
 createExternalEstimatorSettings <- function(
-    divergence = 'entropy',
-    lambda=1e-6,
-    minSd=1e-4,
-    minW=1e-6,
-    distance = 'l2',
-    optimizationMethod = 'primal',
-    solver = 'ECOS',
-    nMaxReweight = 10000,
+    reweightAlgorithm,
+    nMaxReweight = 20000,
     nRepetitions = 1,
     stratifiedSampling = T,
-    maxProp = 500,
     maxDiff = 0.01,
     maxWSMD = 0.2,
     outputDir = getwd(),
-    maxCores = 1
+    maxCores = 1,
+    shortName = NULL,
+    warmStartAlgorithm = NULL
 )
 {
+  if (is.null(shortName))
+    shortName <- glue('{reweightAlgorithm$shortName} n max {nMaxReweight}')
   externalEstimatorSettings <- list(
-    divergence = divergence,
-    lambda = lambda,
-    minSd = minSd,
-    minW = minW,
-    distance = distance,
-    optimizationMethod = optimizationMethod,
-    solver = solver,
+    reweightAlgorithm = reweightAlgorithm,
     nMaxReweight = nMaxReweight,
     nRepetitions = nRepetitions,
     stratifiedSampling = stratifiedSampling,
-    maxProp = maxProp,
     maxDiff = maxDiff,
     maxWSMD = maxWSMD,
     outputDir = outputDir,
-    maxCores = maxCores
+    maxCores = maxCores,
+    shortName = shortName,
+    warmStartAlgorithm = warmStartAlgorithm
   )
   class(externalEstimatorSettings) <- 'externalEstimatorSettings'
   return(externalEstimatorSettings)
@@ -92,7 +80,7 @@ createExternalEstimatorSettings <- function(
 #'
 #' Reweighing algorithm parameters:
 #' @param externalEstimatorSettings an object of class \code{externalEstimatorSettings}
-#' @param createEstimationLogger create a logger in outputDirectory
+#' @param createEstimationLogger boolearn, create a logger in outputDirectory
 #'
 #' @return an object of \code{estimatedExternalPerformanceFromStatistics} with the following fields:
 #'
@@ -137,13 +125,13 @@ estimateExternalPerformanceFromStatistics <- function(
   preD <- preDiagnostics(
     internalData$z,
     externalStats,
-    maxProp = externalEstimatorSettings$maxProp,
     maxDiff = externalEstimatorSettings$maxDiff
     )
   result$preDiagnosis <- preD
   if (preD$status != 'Success') {
     ParallelLogger::logError(glue('Pre-balancing diagnosis status = {preD$status}'))
     result$status <- 'Failure'
+    result$estimationTime <- NA
     return(result)
   }
   # Maintain features and samples according to pre-diagnostic evaluations
@@ -151,28 +139,31 @@ estimateExternalPerformanceFromStatistics <- function(
   internalData$z <- internalData$z[preD$zidx, preD$representedFeatures]
   internalData$y <- internalData$y[preD$zidx]
   internalData$p <- internalData$p[preD$zidx]
-  # Generate indices of sub-samples
-  n <- sum(preD$zidx)
+  # Initialize sub-samples
+  n <- sum(preD$zidx)  # TODO CHANGE TO NROWS(Z)
   nSubsets <- externalEstimatorSettings$nRepetitions
   if (externalEstimatorSettings$nMaxReweight < n*0.75)  { # TODO figure this out
     if (externalEstimatorSettings$stratified)
-      idxs <- stratifiedSplitToRandomSubsets(n, externalEstimatorSettings$nMaxReweight, internalData$y, nSubsets)
+      subsetSampler <- stratifiedSampler(n, externalEstimatorSettings$nMaxReweight, internalData$y)
     else
-      idxs <- splitToRandomSubsets(n, externalEstimatorSettings$nMaxReweight, nSubsets)
+      subsetSampler <- randomSubsetSampler(n, externalEstimatorSettings$nMaxReweight, replace = F)
   } else
-    idxs <- getBootstrapSubsets(n, externalEstimatorSettings$nMaxReweight, nSubsets)
+    subsetSampler <- randomSubsetSampler(n, externalEstimatorSettings$nMaxReweight, replace = T)  # Bootstrap
 
   # Estimation
   estimationStartTime <- Sys.time()
+  if (!is.null(externalEstimatorSettings$warmStartAlgorithm)) {    # Warm start if defined
+    externalEstimatorSettings <- warmStart(externalEstimatorSettings, internalData, externalStats)
+  }
   nCores <- parallel::detectCores()
-  uCores <- min(nCores-1, length(idxs), externalEstimatorSettings$maxCores)
+  uCores <- min(nCores-1, nSubsets, externalEstimatorSettings$maxCores)
   ParallelLogger::logInfo(glue('Detected {nCores} cores and using {uCores}\n'))
   cl <- makeCluster(uCores)
   resultsList <- clusterApply(
-    cl, idxs, estimateSubsetPerformence,
-    internalData=internalData, externalStats = externalStats, estimationParams=externalEstimatorSettings)
+    cl, 1:nSubsets, estimateSubsetPerformence,
+    internalData=internalData, externalStats = externalStats, estimationParams=externalEstimatorSettings, subsetSampler)
   stopCluster(cl)
-  result$estimationTime <- Sys.time() - estimationStartTime
+  result$estimationTime <- difftime(Sys.time(), estimationStartTime, units='mins')
 
   resultsMatrix <- transformResultListToMatrix(resultsList)
   if (is.null(resultsMatrix)) {
@@ -180,13 +171,8 @@ estimateExternalPerformanceFromStatistics <- function(
     result$status <- 'Failure'
     return(result)
   }
-
-  if (externalEstimatorSettings$nMaxReweight >= n)
-    meanResults <- estimateFullSetPerformance(internalData, externalStats, externalEstimatorSettings)
-  else {
-    meanResults <- colMeans(resultsMatrix, na.rm = T)
-  }
-  if (is.null(meanResults)) {
+  meanResults <- colMeans(resultsMatrix, na.rm = T)
+  if (all(is.na(meanResults))) {
     result$status = 'Failure'
     return(result)
   }
@@ -197,6 +183,35 @@ estimateExternalPerformanceFromStatistics <- function(
   result$status <- checkWsmdStatus(resultsMatrix, meanResults, externalEstimatorSettings)
   result$estimation = data.frame(value=unlist(c(list(as.list(meanResults), as.list(s)))))
   return(result)
+}
+
+
+#' Initialize parameters using a short run on the entire set
+#'
+#' @param externalEstimatorSettings an object of class \code{externalEstimatorSettings} with the parameters
+#' of the reweighing algorithm
+#' @param internalData a list that includes internal data and predictions with the following fields:
+#'   z: a data frame of transformed feature-outcome pairs
+#'   y: a vector of outcomes
+#'   p: a vector of predicted outcome probabilities
+#' @param externalStats a vector of means of transformed feature-outcome pairs
+#'
+#' @return an object of class \code{externalEstimatorSettings}
+#'
+warmStart <- function(externalEstimatorSettings, internalData, externalStats) {
+  warmSettings <- externalEstimatorSettings
+  warmSettings$reweightAlgorithm <- externalEstimatorSettings$warmStartAlgorithm
+  mainResult <- estimateFullSetPerformance(internalData, externalStats, warmSettings)
+  w <- mainResult$reweightResults$w
+  if (!is.null(mainResult)) {
+    ra <- externalEstimatorSettings$reweightAlgorithm
+    externalEstimatorSettings$reweightAlgorithm <- ra$setInitialValue(ra, mainResult$reweightResults)
+    wRA <- externalEstimatorSettings$reweightAlgorithm$w0  # TODO just for debugging
+    ParallelLogger::logInfo(glue('Reweight algorithm w0: sum={sum(wRA)}, sd={sd(wRA)} n0-={sum(wRA<=0)}'))
+  }
+  else
+    ParallelLogger::logWarn('Failed to estimate initial value')
+  return(externalEstimatorSettings)
 }
 
 
@@ -248,28 +263,59 @@ checkWsmdStatus <- function(resultsMatrix, meanResults, externalEstimatorSetting
 }
 
 
+######################################################################################################################
+#
+# Subsets samplers
 
-splitToRandomSubsets <- function(n, nmax, nSubsets=1) {
-  # boundaries <- getBoundaries(n, nmax)
-  # nSubsets <- length(boundaries$starts)
-  idxs <- vector(mode = 'list', length = nSubsets)
+#' Random subset sampler
+#'
+#' @param n number of samples
+#' @param nmax maximum number of subsamples
+#' @param replace boolean for sampling with replacement
+#'
+#' @return a \code{randomSubsetSampler} objects
+#'
+randomSubsetSampler <- function(n, nmax, replace=F) {
   nmax <- min(n, nmax)
-  for (k in 1:nSubsets) {
-    idxs[[k]] <- sample(n, nmax)
-  }
-  return(idxs)
+
+  l <- list(
+    n = n,
+    nmax = nmax,
+    replace = replace,
+    sampleNext = randomSubset
+  )
+  class(l) <- 'randomSubsetSampler'
+  return(l)
+
+}
+
+randomSubset <- function(s) {
+  return(sample(s$n, s$nmax, replace=s$replace))
 }
 
 
-getBootstrapSubsets <- function(n, nmax, nSubsets=1) {
-  idxs <- vector(mode = 'list', length = nSubsets)
-  nmax <- min(n, nmax)
-  for (k in 1:nSubsets) {
-    idxs[[k]] <- sample(n, nmax, replace = T)
-  }
-  return(idxs)
-}
+#' Stratified subset sampler
+#'
+#' @param n number of samples
+#' @param nmax maximum number of samples
+#' @param Y outcome vector
+#'
+#' @return a \code{stratifiedSampler} objects
+#'
+stratifiedSampler <- function(n, nmax, Y) {
+  l <- list(
+    n0 = sum(Y==0),
+    n1 = sum(Y==1),
+    nmaxs = stratifiedSizes(n, nmax, Y),
+    idxs0 = which(Y==0),
+    idxs1 = which(Y==1),
+    sampleNext = stratifiedSplitToRandomSubsets
+  )
+  class(l) <- 'stratifiedSampler'
+  ParallelLogger::logInfo(glue('n0={l$n0}, n1={l$n1}, nmaxs1={l$nmaxs[1]}, nmaxs2={l$nmaxs[2]}'))
+  return(l)
 
+}
 
 
 stratifiedSizes <- function(n, nmax, Y) {
@@ -294,28 +340,30 @@ stratifiedSizes <- function(n, nmax, Y) {
 }
 
 
-stratifiedSplitToRandomSubsets <- function(n, nmax, Y, nSubsets=1) {
-  n0 = sum(Y==0)
-  n1 = sum(Y==1)
-  nmaxs <- stratifiedSizes(n, nmax, Y)
-  idxs0 <- which(Y==0)
-  idxs1 <- which(Y==1)
-  cat('nmax 0:', nmaxs[1], ', namx 1:', nmaxs[2], '\n')
-  idxs <- vector(mode = 'list', length = nSubsets)
-  for (k in 1:nSubsets) {
-    idxs[[k]] <- c(idxs0[sample(n0, nmaxs[1])], idxs1[sample(n1, nmaxs[2])])
-  }
+stratifiedSplitToRandomSubsets <- function(s) {
+  # Replace is TRUE by default because the smaller set may not suffice to give different subset
+  # ParallelLogger::logInfo(glue('n0={s$n0}, n1={s$n1}, nmaxs1={s$nmaxs[1]}, nmaxs2={s$nmaxs[2]}'))
+  idxs <- c(s$idxs0[sample(s$n0, s$nmaxs[1], replace = T)], s$idxs1[sample(s$n1, s$nmaxs[2], replace = T)]) # TODO examine
   return(idxs)
 }
 
 
-estimateSubsetPerformence <- function(subsetIdxs, internalData, externalStats, estimationParams) {
+estimateSubsetPerformence <- function(i, internalData, externalStats, estimationParams, subsetSampler) {
 
+  subsetIdxs <- subsetSampler$sampleNext(subsetSampler)
   internalData$z <- internalData$z[subsetIdxs, ]
   internalData$y <- internalData$y[subsetIdxs]
   internalData$p <- internalData$p[subsetIdxs]
 
-  return(estimateFullSetPerformance(internalData, externalStats, estimationParams))
+  if (!is.null(estimationParams$reweightAlgorithm$w0))
+    estimationParams$reweightAlgorithm$w0 <- estimationParams$reweightAlgorithm$w0[subsetIdxs]
+
+  r <- estimateFullSetPerformance(internalData, externalStats, estimationParams)
+
+  if (!is.null(r))
+    return(r$dbRes)
+  else
+    return(NULL)  # TODO check what happens in this case
 }
 
 
@@ -323,228 +371,60 @@ estimateFullSetPerformance <- function(internalData, externalStats, estimationPa
   nZ <- nrow(internalData$z)
   pZ <- ncol(internalData$z)
   pa <- estimationParams
-  ParallelLogger::logInfo(glue('Reweighting data dimensions: n={nZ}, p={pZ}'))
-  ParallelLogger::logInfo(
-    glue('Parameters: {pa$divergence}, lambda={pa$lambda}, distance={pa$distance}, {pa$optimizationMethod}'))
+  # ParallelLogger::logInfo(glue('Reweighting data dimensions: n={nZ}, p={pZ}'))
+  # ParallelLogger::logInfo(
+  #   glue('Parameters: {pa$divergence}, lambda={pa$lambda}, distance={pa$distance}, {pa$optimizationMethod}'))
 
   dbRes <- list()
-  y <- internalData$y
-  z <- internalData$z
-  p <- internalData$p
 
-  classValues <- unique(y)
+  classValues <- unique(internalData$y)
   nClasses <- length(classValues)
   if (nClasses != 2) {
-    cat('Class values are', classValues, '\n')
-    ParallelLogger::logError(glue('Bad namber of classes {nClasses}'))
+    ParallelLogger::logError(glue('Bad namber of classes {nClasses}, values {classValues}'))
     return (NULL)
   }
   # Re-weighting
-  w <- reweightByMeans(
-    z, externalStats,
-    divergence = pa$divergence, lambda = pa$lambda, minSd = pa$minSd, minW = pa$minW, distance = pa$distance,
-    optimizationMethod = pa$optimizationMethod, solver = pa$solver,
-    verbose = T)
-  if (sum(is.na(w))==0) {
-    widx <- w>0
-    dbRes[['n']] <- sum(widx)
-    if (is.factor(y)) # TODO is this the right place
-      y <- as.numeric(y)-1
-    dbRes[['n outcome']] <- as.numeric(t(widx) %*% y)
-    # Post diagnostics
-    postD <- postDiagnostics(w, z, externalStats)
-    dbRes <- c(dbRes, postD)
-    # Performance measures
-    m <- getPerformanceMeasures(y[widx], p[widx], w[widx])
-    dbRes <- c(dbRes, m)
-    return (unlist(dbRes))
-  } else
-    return (NULL)
-}
+  wOptimizer <- pa$reweightAlgorithm
+  reweightResults <- wOptimizer$optimize(wOptimizer, internalData$z, externalStats)
+  dbRes[['Opt err']] <- reweightResults$err
+  dbRes[['n iter']] <- reweightResults$totalIter
 
-
-
-
-#' Pre re-weighting diagnostics
-#'
-#' @description compare external expectations and internal means before reweighting
-#'
-#' @param z a data frame of transformed feature-outcome pairs
-#' @param mu a vector of means of transformed feature-outcome pairs
-#' @param maxProp maximum proportion between internal and external means to determine imbalance
-#' @param maxDiff maximum difference from which to check max prop
-#' @param npMinRatio minimum ratio between number of features and number of examples
-#'
-#' @return a named list with the following fields:
-#' ...
-#'
-#' @export
-preDiagnostics <- function(z, mu, maxProp, maxDiff, npMinRatio = 4) {
-  nInput <- nrow(z)
-  pInput <- ncol(z)
-  ParallelLogger::logInfo(glue('Input data size n={nInput}, p={pInput}'))
-
-  naInZ <- any(is.na(z))
-  if (naInZ) {
-    ParallelLogger::logError("Data set has na entries, cannot reweight")
-    return(list(status='Failure'))  # Do we need this
-  }
-  # remove features with Na entries in table1
-  naInMu <- is.na(mu)
-  if (any(naInMu)) {
-    ParallelLogger::logError("Expectation vector has na entries, cannot reweight")
-    return(list(status='Failure'))  # Do we need this
-  }
-  includeFeatures <- !naInMu
-  # Regardless of Na status in mu, perform other tests
-  binaryResults <- preCheckBinaryFeatures(z, mu, includeFeatures, maxProp, maxDiff)
-  unaryResults <- preCheckUnaryFeatures(z, mu, binaryResults, maxUnaryDiff = maxDiff)
-  includeFeatures <- unaryResults$includeFeatures
-
-  representedFeatures <- names(mu[includeFeatures])
-  # Check range of variables with >1 values
-  numericFeatureIndicators <- apply(z, 2, function(c) {length(unique(c))>1})
-  numericFeatureIndicators <- numericFeatureIndicators & includeFeatures
-  muR <- mu[numericFeatureIndicators]
-  zR <- z[binaryResults$zidx, numericFeatureIndicators]  # TODO - should we limit to zidx?
-  inRangeTol <- maxDiff  # TODO should we use a different param?
-  inRange <- (muR >= apply(zR, 2, min)-maxDiff) & (muR <= apply(zR, 2, max)+maxDiff)
-  outOfRange <- names(muR[!inRange])
-  if (length(outOfRange) > 0) {
-    ParallelLogger::logError('Out of range variables:')
-    for (f in outOfRange)
-      ParallelLogger::logError(glue('{f}, mu={muR[f]}, min={min(zR[,f])}, max={max(zR[ ,f])}'))
-  }
-  # few samples
-  fewSamples = sum(binaryResults$zidx)/length(representedFeatures) < npMinRatio
-  if (fewSamples) {
-    cat('Few samples\n')
-    ParallelLogger::logError(glue("Few samples n={sum(binaryResults$zidx)}, p={length(representedFeatures)}"))
-  }
-
-  status = 'Success'
-  if ( length(outOfRange) > 0 || unaryResults$incompatableUnaryVariable || fewSamples
-       # || length(binaryResults$highlySkewedBinary)>0
-       # || length(unaryResults$unaryFeatures) > 0
-  )
-    status = 'Failure'
-  ParallelLogger::logInfo(glue('Pre-evaluation diagnosis status = {status}'))
-  return (list(
-    outOfRange = outOfRange,
-    representedFeatures=representedFeatures,
-    zidx = binaryResults$zidx,
-    unaryFeatures = unaryResults$unaryFeatures,
-    incompatableUnaryVariable = unaryResults$incompatableUnaryVariable,
-    highlySkewedBinary=binaryResults$highlySkewedBinary,
-    status = status
-    ))
-}
-
-
-preCheckBinaryFeatures <- function(z, mu, includeFeatures, maxProp, maxDiff) {
-  n1 <- nrow(z)
-  binaryFeatureIndicators <- apply(z, 2, function(c) {length(unique(c))==2})
-  binaryFeatureIndicators <- binaryFeatureIndicators & includeFeatures
-  # Identify feature that has a single value in the external dataset and the corresponding sub-population in the
-  # internal one
-  binaryFeatures <- names(mu[binaryFeatureIndicators])
-  zidx <- rep(TRUE, n1)
-  for (f in binaryFeatures) {
-    vals <- unique(z[,f])
-    for (val in vals) {
-      if (mu[f]==val) {
-        ParallelLogger::logInfo(glue('Removing subjects in which binary {f} != {val} and mu == {val}'))
-        zidx <- zidx & (z[ , f]==val)
-        includeFeatures[f] <- F
-        ParallelLogger::logInfo(glue('Maintained {sum(zidx)}/{n1} subjects and {sum(includeFeatures)} features.\n'))
-      }
+  # TODO make this optional
+  if (F) {
+    runId <- gsub(':', '-', Sys.time())
+    logName = glue('{class(wOptimizer)} {runId} log.png')
+    if (class(wOptimizer) %in% c('sgdWeightOptimizer', 'sgdTunedWeightOptimizer', 'seTunedWeightOptimizer')) {
+      png(filename = file.path(wOptimizer$outputDir, logName), width = 4*480, height = 4*480)
+      plotOptimizationLog(reweightResults$log, wOptimizer, nrow(internalData$z))
+      dev.off()
     }
   }
-  includeBinaryFeatures <- binaryFeatureIndicators & includeFeatures
-  binaryFeatures <- names(mu[includeBinaryFeatures])
-  ParallelLogger::logInfo(glue('z has {length(binaryFeatures)} binary features'))
-  highlySkewedBinary <- getHighlySkewedBinaryFeatures(mu[binaryFeatures], z[zidx, binaryFeatures], maxProp, maxDiff)
-  return(list(includeFeatures=includeFeatures, zidx = zidx, highlySkewedBinary=highlySkewedBinary))
-}
 
-
-# TODO compare with the version used in the Stroke use-case
-#' Get highly skewed binary features
-#'
-#' Assuming that if the max proportion is violated than the expectations may be small and therefore checking also
-#' maxDiff
-#'
-#' @param mu expectations
-#' @param z data
-#' @param maxProp max proportion
-#' @param maxDiff max difference from with to check max proportion
-#'
-getHighlySkewedBinaryFeatures <- function(mu, z, maxProp, maxDiff) {
-  ParallelLogger::logInfo(glue("Checking skewness with max proportion = {maxProp}, conditional max diff {maxDiff}"))
-  imbalanced <- rep(F, length(mu))
-  propM <- rep(1, length(mu))
-  names(propM) <- names(mu)
-
-  if (!is.vector(z)) {
-    meanz <- colMeans(z)
-    for (i in 1:(length(mu))) {
-      minzi <- min(z[ , i])
-      propM[i] <- abs((mu[i]-minzi)/(meanz[i]-minzi))
-      imbalanced[i] <- (propM[i]>maxProp | (1/maxProp)>propM[i]) & (abs(mu[i]-meanz[i]) > maxDiff)
+  w <- reweightResults$w_hat
+  if (reweightResults$status == 'Success') {
+    if (sum(is.na(w))==0) {
+      widx <- w>0
+      dbRes[['n']] <- sum(widx)
+      if (is.factor(internalData$y)) # TODO is this the right place
+        internalData$y <- as.numeric(internalData$y)-1
+      dbRes[['n outcome']] <- as.numeric(t(widx) %*% internalData$y)
+      # Post diagnostics
+      postD <- postDiagnostics(w, internalData$z, externalStats)
+      dbRes <- c(dbRes, postD)
+      # Performance measures
+      m <- getPerformanceMeasures(internalData$y[widx], internalData$p[widx], w[widx])
+      dbRes <- c(dbRes, m)
+      return (list(dbRes=(unlist(dbRes)), reweightResults=reweightResults))
+    }
+    else {
+      ParallelLogger::logWarn('w containtes NA')
+      return(NULL)
     }
   }
   else {
-    meanz <- mean(z)
-    minz <- min(z)
-    propM[1] <- abs((mu[1]-minz)/(meanz-minz))
-    imbalanced[1] <- (propM[1]>maxProp | (1/maxProp)>propM[1]) & (abs(mu[1]-meanz) > maxDiff)
+    ParallelLogger::logWarn('Optimizer status != Success')
+    return (NULL)
   }
-  skewedNames <- names(mu[imbalanced])
-  if (sum(imbalanced) > 0) {
-    reportDf <- data.frame(matrix(ncol=3, nrow=sum(imbalanced)))
-    rownames(reportDf) <- names(mu[imbalanced])
-    colnames(reportDf) <- c('Int', 'Ext', 'Prop')
-    reportDf[[1]] <- meanz[imbalanced]
-    reportDf[[2]] <- mu[imbalanced]
-    reportDf[[3]] <- propM[imbalanced]
-    cat('Found imbalanced features:\n')
-    print(reportDf)
-    for (f in skewedNames) {
-      ParallelLogger::logWarn(glue('Skewed feature {f}: mean={meanz[f]} mu={mu[f]} r={propM[f]}'))
-    }
-  }
-  return(skewedNames)
-}
-
-
-
-preCheckUnaryFeatures <- function(z, mu, results, maxUnaryDiff) {
-  n1 <- nrow(z)
-  includeFeatures <- results$includeFeatures
-  unaryFeatures <- apply(z, 2, function(c) {length(unique(c))==1})
-  unaryFeatures <- unaryFeatures & includeFeatures
-  featureNames <- names(mu)
-
-  incompatableUnaryVariable <- F
-  nUnary <-sum(unaryFeatures)
-  if (nUnary>0) {
-    for (f in (featureNames[unaryFeatures]))
-      ParallelLogger::logInfo(glue("Found unary feature {f}"))
-    if (nUnary>1)
-      badUnary <- abs(colMeans(z[, unaryFeatures])-mu[unaryFeatures]) > maxUnaryDiff  # TODO consider sample size
-    else
-      badUnary <- abs(mean(z[, unaryFeatures])-mu[unaryFeatures]) > maxUnaryDiff
-    if (any(badUnary)) {
-        incompatableUnaryVariable <- T
-        for (f in (featureNames[unaryFeatures][badUnary]))
-          ParallelLogger::logError(glue('Bad unary feature {f}, internal={mean(z[ ,f])}, external={mu[f]}'))
-    }
-    includeFeatures <- includeFeatures & !unaryFeatures
-  }
-  return(list(
-    includeFeatures=includeFeatures,
-    incompatableUnaryVariable = incompatableUnaryVariable,
-    unaryFeatures = featureNames[unaryFeatures]))
 }
 
 
@@ -552,61 +432,46 @@ preCheckUnaryFeatures <- function(z, mu, results, maxUnaryDiff) {
 #'
 #' @description Summarize statistics of metrics obtained by bootstrapping
 #'
+#' see https://www.r-bloggers.com/2019/09/understanding-bootstrap-confidence-interval-output-from-the-r-boot-package/
+#'
 #' @param b bootstrap results matrix columns correspond to different metrix, rows to repetitions. Columns
 #' should be named by the metric.
 #'
 #' @return a named list with bootstrap statistics for every metric
 #'
+#' @export
 summarizeBootstrap <- function(b) {
-  probs <- c(0.025, 0.5, 0.975)
+  probs <- c(0.025, 0.975)
   nboot <- nrow(b)
   s <- list()
   for (measure in colnames(b)) {
     r <- b[,measure]  # TODO learn how to extract vectors from matrices
-    resultsQuantiles <- quantile(r, probs = probs, na.rm = TRUE)
-    # for (i in 1:length(probs))
-    s[[paste('Rough 95% lower', measure)]] = resultsQuantiles[[1]]
-    s[[paste('Median', measure)]] = resultsQuantiles[[2]]
-    s[[paste('Rough 95% upper', measure)]] = resultsQuantiles[[3]]
+    if (min(r)>-1) {
 
-    s[[paste(measure, 'mean')]] = mean(r, na.rm = TRUE)
-    s[[paste(measure, 'sd')]] = sd(r, na.rm = TRUE)
-    s[['n repetitions']] = nboot - sum(is.na(r))
+      resultsQuantiles <- quantile(r, probs = probs, na.rm = TRUE)
+      s[[paste('prc lower', measure)]] = resultsQuantiles[[1]]
+      s[[paste('prc upper', measure)]] = resultsQuantiles[[2]]
+
+      # Standard normal interval assuming a zero bias
+      # TODO correct for biases in case there is a complete sample
+      # TODO tailor transformations to specific metrics
+      r1 <- log(1+r)
+      m <- mean(r1)
+      se <- sd(r1)
+
+      s[[paste('95% lower', measure)]] = exp(m-1.96*se)-1
+      s[[paste('Median', measure)]] = median(r)
+      s[[paste('95% upper', measure)]] = exp(m+1.96*se)-1
+
+      s[[paste(measure, 'mean')]] = mean(r, na.rm = TRUE)
+      s[[paste(measure, 'sd')]] = sd(r, na.rm = TRUE)
+    }
   }
+  s[['n repetitions']] = nboot - sum(is.na(r))
   return(s)
 }
 
 
-#' Post reweighing diagnostics
-#'
-#' @description compute diagnostics of weighted samples
-#'
-#'
-#' @param w a vector of weights
-#' @param z a data frame of transformed feature-outcome pairs
-#' @param mu a vector of means of transformed feature-outcome pairs
-#'
-#' @return a named list with the following:
-#'   maxw
-#' TODO   W2
-#' kl
-#'
-postDiagnostics <- function(w, z, mu) {
-  n <- length(w)
-  p <- w/sum(w)
-  klIdx <- p>0
-  kl <- log(n) + as.numeric(t(p[klIdx]) %*% log(p[klIdx]))
-  chi2ToUnif <- n*sum((p-1/n)**2)  #  = \sum(p-1/n)^2/1/n
-  maxWeightedSMD <- computeMaxSMD(mu, z, p)
-
-  diagnostics <- list(
-    'Max weight'=max(w),
-    'chi2 to uniform' = chi2ToUnif,
-    kl = kl,
-    'Max Weighted SMD' = maxWeightedSMD)  # TODO add diagnostics
-  ParallelLogger::logInfo(glue("Max weighted SMD = {maxWeightedSMD}"))
-  return(diagnostics)
-}
 
 
 #' Get performance measures
@@ -618,6 +483,9 @@ postDiagnostics <- function(w, z, mu) {
 #' @param p probabilities vector
 #' @param w (optional) weight vector
 #'
+#' @return Performence measures....
+#'
+#' @export
 getPerformanceMeasures <- function(y, p, w=NULL) {
   nClasses <- length(unique(y))
   if (nClasses==2) {

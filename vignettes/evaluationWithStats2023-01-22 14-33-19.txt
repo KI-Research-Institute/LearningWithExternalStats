@@ -1,0 +1,170 @@
+2023-01-22 14:33:19	[Main thread]	INFO	LearningWithExternalStats	preCheckBinaryFeatures	z has 1 binary features
+2023-01-22 14:33:19	[Main thread]	WARN	LearningWithExternalStats	getHighlySkewedBinaryFeatures	Skewed feature Y: n=1000 n1=NA mean=0.478 mu=0.452 r=0.946 var proxy=0.001
+2023-01-22 14:33:19	[Main thread]	INFO	LearningWithExternalStats	preDiagnostics	Pre-evaluation diagnosis status = Success
+2023-01-22 14:33:19	[Main thread]	INFO	LearningWithExternalStats	estimateExternalPerformanceFromStatistics	Detected 8 cores and using 3
+2023-01-22 14:33:19	[Main thread]	TRACE	LearningWithExternalStats	estimateExternalPerformanceFromStatistics	Initiating cluster with 3 threads
+2023-01-22 14:33:20	[Thread 1]	TRACE			Thread 1 initiated
+2023-01-22 14:33:20	[Thread 2]	TRACE			Thread 2 initiated
+2023-01-22 14:33:20	[Thread 3]	TRACE			Thread 3 initiated
+2023-01-22 14:33:23	[Thread 3]	INFO	LearningWithExternalStats	estimateFullSetPerformance	Reweighting data dimensions: n=1000, p=41
+2023-01-22 14:33:23	[Thread 2]	INFO	LearningWithExternalStats	estimateFullSetPerformance	Reweighting data dimensions: n=1000, p=41
+2023-01-22 14:33:24	[Thread 2]	INFO	LearningWithExternalStats	reweightByMeans	mean(w) = 1.00 (sd = 3.21, min = 8.2e-11, max = 42)
+2023-01-22 14:33:24	[Thread 2]	INFO	LearningWithExternalStats	postDiagnostics	Max weighted SMD = 2.8276845295811e-08
+2023-01-22 14:33:24	[Thread 2]	INFO	LearningWithExternalStats	estimateFullSetPerformance	Reweighting data dimensions: n=1000, p=41
+2023-01-22 14:33:24	[Thread 1]	INFO	LearningWithExternalStats	reweightByMeans	mean(w) = 1.00 (sd = 3.73, min = 1.3e-23, max = 49)
+2023-01-22 14:33:24	[Thread 1]	INFO	LearningWithExternalStats	postDiagnostics	Max weighted SMD = 0.00591198983863662
+2023-01-22 14:33:24	[Thread 1]	INFO	LearningWithExternalStats	estimateFullSetPerformance	Reweighting data dimensions: n=1000, p=41
+2023-01-22 14:33:24	[Thread 3]	INFO	LearningWithExternalStats	reweightByMeans	mean(w) = 1.00 (sd = 4.20, min = 1.8e-19, max = 72)
+2023-01-22 14:33:24	[Thread 3]	INFO	LearningWithExternalStats	postDiagnostics	Max weighted SMD = 0.00986740092972713
+2023-01-22 14:33:25	[Thread 3]	INFO	LearningWithExternalStats	estimateFullSetPerformance	Reweighting data dimensions: n=1000, p=41
+2023-01-22 14:33:25	[Thread 2]	INFO	LearningWithExternalStats	reweightByMeans	mean(w) = 1.00 (sd = 3.02, min = 2.4e-12, max = 32)
+2023-01-22 14:33:25	[Thread 2]	INFO	LearningWithExternalStats	postDiagnostics	Max weighted SMD = 3.21809071046855e-08
+2023-01-22 14:33:25	[Thread 2]	INFO	LearningWithExternalStats	estimateFullSetPerformance	Reweighting data dimensions: n=1000, p=41
+2023-01-22 14:33:25	[Thread 1]	INFO	LearningWithExternalStats	reweightByMeans	mean(w) = 1.00 (sd = 3.70, min = 4.7e-23, max = 55)
+2023-01-22 14:33:25	[Thread 1]	INFO	LearningWithExternalStats	postDiagnostics	Max weighted SMD = 1.73321253683795e-08
+2023-01-22 14:33:25	[Thread 1]	INFO	LearningWithExternalStats	estimateFullSetPerformance	Reweighting data dimensions: n=1000, p=41
+2023-01-22 14:33:26	[Thread 3]	INFO	LearningWithExternalStats	reweightByMeans	mean(w) = 1.00 (sd = 3.57, min = 7.6e-10, max = 58)
+2023-01-22 14:33:26	[Thread 3]	INFO	LearningWithExternalStats	postDiagnostics	Max weighted SMD = 1.16058220383299e-08
+2023-01-22 14:33:26	[Thread 3]	INFO	LearningWithExternalStats	estimateFullSetPerformance	Reweighting data dimensions: n=1000, p=41
+2023-01-22 14:33:26	[Thread 2]	INFO	LearningWithExternalStats	reweightByMeans	mean(w) = 1.00 (sd = 3.83, min = 1.3e-22, max = 52)
+2023-01-22 14:33:26	[Thread 2]	INFO	LearningWithExternalStats	postDiagnostics	Max weighted SMD = 0.0142200205594812
+2023-01-22 14:33:26	[Thread 2]	INFO	LearningWithExternalStats	estimateFullSetPerformance	Reweighting data dimensions: n=1000, p=41
+2023-01-22 14:33:26	[Thread 1]	INFO	LearningWithExternalStats	reweightByMeans	mean(w) = 1.00 (sd = 3.28, min = 7.7e-13, max = 48)
+2023-01-22 14:33:26	[Thread 1]	INFO	LearningWithExternalStats	postDiagnostics	Max weighted SMD = 8.81162749004178e-09
+2023-01-22 14:33:26	[Thread 3]	INFO	LearningWithExternalStats	reweightByMeans	mean(w) = 1.00 (sd = 3.69, min = 2.6e-15, max = 55)
+2023-01-22 14:33:26	[Thread 3]	INFO	LearningWithExternalStats	postDiagnostics	Max weighted SMD = 1.04728345665448e-08
+2023-01-22 14:33:26	[Thread 1]	INFO	LearningWithExternalStats	estimateFullSetPerformance	Reweighting data dimensions: n=1000, p=41
+2023-01-22 14:33:26	[Thread 3]	INFO	LearningWithExternalStats	estimateFullSetPerformance	Reweighting data dimensions: n=1000, p=41
+2023-01-22 14:33:27	[Thread 2]	INFO	LearningWithExternalStats	reweightByMeans	mean(w) = 1.00 (sd = 3.57, min = 4.1e-16, max = 55)
+2023-01-22 14:33:27	[Thread 2]	INFO	LearningWithExternalStats	postDiagnostics	Max weighted SMD = 2.33172383776042e-07
+2023-01-22 14:33:27	[Thread 2]	INFO	LearningWithExternalStats	estimateFullSetPerformance	Reweighting data dimensions: n=1000, p=41
+2023-01-22 14:33:27	[Thread 1]	INFO	LearningWithExternalStats	reweightByMeans	mean(w) = 1.00 (sd = 3.57, min = 5.7e-11, max = 62)
+2023-01-22 14:33:27	[Thread 1]	INFO	LearningWithExternalStats	postDiagnostics	Max weighted SMD = 3.66765156831944e-08
+2023-01-22 14:33:27	[Thread 1]	INFO	LearningWithExternalStats	estimateFullSetPerformance	Reweighting data dimensions: n=1000, p=41
+2023-01-22 14:33:27	[Thread 3]	INFO	LearningWithExternalStats	reweightByMeans	mean(w) = 1.00 (sd = 4.15, min = 2.1e-25, max = 61)
+2023-01-22 14:33:27	[Thread 2]	INFO	LearningWithExternalStats	reweightByMeans	mean(w) = 1.00 (sd = 3.47, min = 1.4e-24, max = 37)
+2023-01-22 14:33:27	[Thread 3]	INFO	LearningWithExternalStats	postDiagnostics	Max weighted SMD = 0.0153360627446497
+2023-01-22 14:33:27	[Thread 2]	INFO	LearningWithExternalStats	postDiagnostics	Max weighted SMD = 0.00506469636508137
+2023-01-22 14:33:28	[Thread 3]	INFO	LearningWithExternalStats	estimateFullSetPerformance	Reweighting data dimensions: n=1000, p=41
+2023-01-22 14:33:28	[Thread 2]	INFO	LearningWithExternalStats	estimateFullSetPerformance	Reweighting data dimensions: n=1000, p=41
+2023-01-22 14:33:28	[Thread 1]	INFO	LearningWithExternalStats	reweightByMeans	mean(w) = 1.00 (sd = 3.65, min = 3.5e-11, max = 43)
+2023-01-22 14:33:28	[Thread 1]	INFO	LearningWithExternalStats	postDiagnostics	Max weighted SMD = 4.07629469786799e-08
+2023-01-22 14:33:28	[Thread 3]	INFO	LearningWithExternalStats	reweightByMeans	mean(w) = 1.00 (sd = 3.89, min = 2.5e-23, max = 38)
+2023-01-22 14:33:28	[Thread 1]	INFO	LearningWithExternalStats	estimateFullSetPerformance	Reweighting data dimensions: n=1000, p=41
+2023-01-22 14:33:28	[Thread 3]	INFO	LearningWithExternalStats	postDiagnostics	Max weighted SMD = 0.00430017672162847
+2023-01-22 14:33:29	[Thread 2]	INFO	LearningWithExternalStats	reweightByMeans	mean(w) = 1.00 (sd = 3.81, min = 1.5e-14, max = 62)
+2023-01-22 14:33:29	[Thread 2]	INFO	LearningWithExternalStats	postDiagnostics	Max weighted SMD = 6.1058725723225e-08
+2023-01-22 14:33:29	[Thread 2]	INFO	LearningWithExternalStats	estimateFullSetPerformance	Reweighting data dimensions: n=1000, p=41
+2023-01-22 14:33:29	[Thread 3]	INFO	LearningWithExternalStats	estimateFullSetPerformance	Reweighting data dimensions: n=1000, p=41
+2023-01-22 14:33:29	[Thread 1]	INFO	LearningWithExternalStats	reweightByMeans	mean(w) = 1.00 (sd = 3.41, min = 8.1e-14, max = 31)
+2023-01-22 14:33:29	[Thread 1]	INFO	LearningWithExternalStats	postDiagnostics	Max weighted SMD = 1.66383106859847e-08
+2023-01-22 14:33:29	[Thread 1]	INFO	LearningWithExternalStats	estimateFullSetPerformance	Reweighting data dimensions: n=1000, p=41
+2023-01-22 14:33:29	[Thread 2]	INFO	LearningWithExternalStats	reweightByMeans	mean(w) = 1.00 (sd = 3.98, min = 1e-25, max = 50)
+2023-01-22 14:33:29	[Thread 3]	INFO	LearningWithExternalStats	reweightByMeans	mean(w) = 1.00 (sd = 3.71, min = 3.7e-20, max = 43)
+2023-01-22 14:33:29	[Thread 2]	INFO	LearningWithExternalStats	postDiagnostics	Max weighted SMD = 0.00730220179087317
+2023-01-22 14:33:29	[Thread 3]	INFO	LearningWithExternalStats	postDiagnostics	Max weighted SMD = 0.014195935329752
+2023-01-22 14:33:30	[Thread 2]	INFO	LearningWithExternalStats	estimateFullSetPerformance	Reweighting data dimensions: n=1000, p=41
+2023-01-22 14:33:30	[Thread 3]	INFO	LearningWithExternalStats	estimateFullSetPerformance	Reweighting data dimensions: n=1000, p=41
+2023-01-22 14:33:30	[Thread 1]	INFO	LearningWithExternalStats	reweightByMeans	mean(w) = 1.00 (sd = 4.28, min = 2.7e-30, max = 75)
+2023-01-22 14:33:30	[Thread 1]	INFO	LearningWithExternalStats	postDiagnostics	Max weighted SMD = 0.0087069526028912
+2023-01-22 14:33:30	[Thread 3]	INFO	LearningWithExternalStats	reweightByMeans	mean(w) = 1.00 (sd = 3.90, min = 1.9e-21, max = 61)
+2023-01-22 14:33:30	[Thread 1]	INFO	LearningWithExternalStats	estimateFullSetPerformance	Reweighting data dimensions: n=1000, p=41
+2023-01-22 14:33:30	[Thread 3]	INFO	LearningWithExternalStats	postDiagnostics	Max weighted SMD = 5.4681221517547e-08
+2023-01-22 14:33:30	[Thread 2]	INFO	LearningWithExternalStats	reweightByMeans	mean(w) = 1.00 (sd = 3.71, min = 7e-24, max = 53)
+1
+2023-01-22 14:33:30	[Thread 2]	INFO	LearningWithExternalStats	postDiagnostics	Max weighted SMD = 0.00316885996905296
+2023-01-22 14:33:31	[Thread 2]	INFO	LearningWithExternalStats	estimateFullSetPerformance	Reweighting data dimensions: n=1000, p=41
+2023-01-22 14:33:31	[Thread 1]	INFO	LearningWithExternalStats	reweightByMeans	mean(w) = 1.00 (sd = 2.90, min = 1.5e-10, max = 28)
+2023-01-22 14:33:31	[Thread 1]	INFO	LearningWithExternalStats	postDiagnostics	Max weighted SMD = 3.25935926169478e-09
+2023-01-22 14:33:31	[Thread 3]	INFO	LearningWithExternalStats	reweightByMeans	mean(w) = 1.00 (sd = 3.85, min = 2.4e-21, max = 64)
+2023-01-22 14:33:31	[Thread 3]	INFO	LearningWithExternalStats	postDiagnostics	Max weighted SMD = 1.03752624994983e-07
+2023-01-22 14:33:31	[Thread 2]	INFO	LearningWithExternalStats	reweightByMeans	mean(w) = 1.00 (sd = 4.10, min = 1.8e-20, max = 60)
+2023-01-22 14:33:31	[Thread 2]	INFO	LearningWithExternalStats	postDiagnostics	Max weighted SMD = 1.98403791365406e-08
+2023-01-22 14:33:32	[Thread 1]	INFO	LearningWithExternalStats	estimateFullSetPerformance	Reweighting data dimensions: n=1000, p=41
+2023-01-22 14:33:32	[Thread 2]	INFO	LearningWithExternalStats	estimateFullSetPerformance	Reweighting data dimensions: n=1000, p=41
+2023-01-22 14:33:32	[Thread 3]	INFO	LearningWithExternalStats	estimateFullSetPerformance	Reweighting data dimensions: n=1000, p=41
+2023-01-22 14:33:32	[Thread 2]	INFO	LearningWithExternalStats	reweightByMeans	mean(w) = 1.00 (sd = 3.49, min = 2.5e-13, max = 48)
+2023-01-22 14:33:32	[Thread 2]	INFO	LearningWithExternalStats	postDiagnostics	Max weighted SMD = 1.93070154643733e-08
+2023-01-22 14:33:32	[Thread 2]	INFO	LearningWithExternalStats	estimateFullSetPerformance	Reweighting data dimensions: n=1000, p=41
+2023-01-22 14:33:32	[Thread 1]	INFO	LearningWithExternalStats	reweightByMeans	mean(w) = 1.00 (sd = 3.90, min = 1.1e-28, max = 45)
+2023-01-22 14:33:32	[Thread 1]	INFO	LearningWithExternalStats	postDiagnostics	Max weighted SMD = 0.00107521401182314
+2023-01-22 14:33:32	[Thread 1]	INFO	LearningWithExternalStats	estimateFullSetPerformance	Reweighting data dimensions: n=1000, p=41
+2023-01-22 14:33:33	[Thread 3]	INFO	LearningWithExternalStats	reweightByMeans	mean(w) = 1.00 (sd = 3.55, min = 3.8e-22, max = 46)
+2023-01-22 14:33:33	[Thread 3]	INFO	LearningWithExternalStats	postDiagnostics	Max weighted SMD = 0.0126385083584049
+2023-01-22 14:33:33	[Thread 3]	INFO	LearningWithExternalStats	estimateFullSetPerformance	Reweighting data dimensions: n=1000, p=41
+2023-01-22 14:33:33	[Thread 2]	INFO	LearningWithExternalStats	reweightByMeans	mean(w) = 1.00 (sd = 3.50, min = 6.2e-28, max = 38)
+2023-01-22 14:33:33	[Thread 1]	INFO	LearningWithExternalStats	reweightByMeans	mean(w) = 1.00 (sd = 3.98, min = 1e-17, max = 51)
+2023-01-22 14:33:33	[Thread 2]	INFO	LearningWithExternalStats	postDiagnostics	Max weighted SMD = 0.00208013710873351
+2023-01-22 14:33:33	[Thread 1]	INFO	LearningWithExternalStats	postDiagnostics	Max weighted SMD = 0.0297473109304733
+2023-01-22 14:33:33	[Thread 2]	INFO	LearningWithExternalStats	estimateFullSetPerformance	Reweighting data dimensions: n=1000, p=41
+2023-01-22 14:33:33	[Thread 1]	INFO	LearningWithExternalStats	estimateFullSetPerformance	Reweighting data dimensions: n=1000, p=41
+2023-01-22 14:33:34	[Thread 3]	INFO	LearningWithExternalStats	reweightByMeans	mean(w) = 1.00 (sd = 3.50, min = 7.4e-25, max = 59)
+2023-01-22 14:33:34	[Thread 3]	INFO	LearningWithExternalStats	postDiagnostics	Max weighted SMD = 0.00360035438361784
+2023-01-22 14:33:34	[Thread 3]	INFO	LearningWithExternalStats	estimateFullSetPerformance	Reweighting data dimensions: n=1000, p=41
+2023-01-22 14:33:34	[Thread 2]	INFO	LearningWithExternalStats	reweightByMeans	mean(w) = 1.00 (sd = 3.83, min = 2.3e-23, max = 46)
+2023-01-22 14:33:34	[Thread 2]	INFO	LearningWithExternalStats	postDiagnostics	Max weighted SMD = 0.00447532383798448
+2023-01-22 14:33:34	[Thread 2]	INFO	LearningWithExternalStats	estimateFullSetPerformance	Reweighting data dimensions: n=1000, p=41
+2023-01-22 14:33:34	[Thread 1]	INFO	LearningWithExternalStats	reweightByMeans	mean(w) = 1.00 (sd = 3.85, min = 6.9e-19, max = 50)
+2023-01-22 14:33:34	[Thread 1]	INFO	LearningWithExternalStats	postDiagnostics	Max weighted SMD = 0.0016309053929263
+2023-01-22 14:33:34	[Thread 1]	INFO	LearningWithExternalStats	estimateFullSetPerformance	Reweighting data dimensions: n=1000, p=41
+2023-01-22 14:33:34	[Thread 3]	INFO	LearningWithExternalStats	reweightByMeans	mean(w) = 1.00 (sd = 3.52, min = 5.5e-25, max = 32)
+2023-01-22 14:33:34	[Thread 3]	INFO	LearningWithExternalStats	postDiagnostics	Max weighted SMD = 0.00434351218485983
+2023-01-22 14:33:35	[Thread 3]	INFO	LearningWithExternalStats	estimateFullSetPerformance	Reweighting data dimensions: n=1000, p=41
+2023-01-22 14:33:35	[Thread 1]	INFO	LearningWithExternalStats	reweightByMeans	mean(w) = 1.00 (sd = 3.82, min = 9.3e-15, max = 60)
+2023-01-22 14:33:35	[Thread 1]	INFO	LearningWithExternalStats	postDiagnostics	Max weighted SMD = 2.57782435649387e-08
+2023-01-22 14:33:35	[Thread 2]	INFO	LearningWithExternalStats	reweightByMeans	mean(w) = 1.00 (sd = 3.58, min = 7.1e-20, max = 47)
+2023-01-22 14:33:35	[Thread 2]	INFO	LearningWithExternalStats	postDiagnostics	Max weighted SMD = 0.0102610536097281
+2023-01-22 14:33:35	[Thread 1]	INFO	LearningWithExternalStats	estimateFullSetPerformance	Reweighting data dimensions: n=1000, p=41
+2023-01-22 14:33:35	[Thread 3]	INFO	LearningWithExternalStats	reweightByMeans	mean(w) = 1.00 (sd = 3.91, min = 8.3e-28, max = 58)
+2023-01-22 14:33:35	[Thread 3]	INFO	LearningWithExternalStats	postDiagnostics	Max weighted SMD = 0.00632235368553105
+2023-01-22 14:33:36	[Thread 2]	INFO	LearningWithExternalStats	estimateFullSetPerformance	Reweighting data dimensions: n=1000, p=41
+2023-01-22 14:33:36	[Thread 3]	INFO	LearningWithExternalStats	estimateFullSetPerformance	Reweighting data dimensions: n=1000, p=41
+2023-01-22 14:33:36	[Thread 1]	INFO	LearningWithExternalStats	reweightByMeans	mean(w) = 1.00 (sd = 3.76, min = 1.2e-15, max = 55)
+2023-01-22 14:33:36	[Thread 1]	INFO	LearningWithExternalStats	postDiagnostics	Max weighted SMD = 5.3666093537334e-08
+2023-01-22 14:33:37	[Thread 2]	INFO	LearningWithExternalStats	reweightByMeans	mean(w) = 1.00 (sd = 3.68, min = 2.1e-27, max = 40)
+2023-01-22 14:33:37	[Thread 2]	INFO	LearningWithExternalStats	postDiagnostics	Max weighted SMD = 0.00257841880730429
+2023-01-22 14:33:37	[Thread 3]	INFO	LearningWithExternalStats	reweightByMeans	mean(w) = 1.00 (sd = 3.18, min = 1.1e-13, max = 56)
+2023-01-22 14:33:37	[Thread 3]	INFO	LearningWithExternalStats	postDiagnostics	Max weighted SMD = 9.53499612076765e-09
+2023-01-22 14:33:37	[Thread 1]	TRACE			Thread 1 terminated
+2023-01-22 14:33:37	[Thread 2]	TRACE			Thread 2 terminated
+2023-01-22 14:33:37	[Main thread]	TRACE	LearningWithExternalStats	estimateExternalPerformanceFromStatistics	Stopping cluster
+2023-01-22 14:33:37	[Main thread]	INFO	LearningWithExternalStats	checkWsmdStatus	Max weighted SMD 1 0.00591198983863662
+2023-01-22 14:33:37	[Main thread]	INFO	LearningWithExternalStats	checkWsmdStatus	Max weighted SMD 2 2.8276845295811e-08
+2023-01-22 14:33:37	[Main thread]	INFO	LearningWithExternalStats	checkWsmdStatus	Max weighted SMD 3 0.00986740092972713
+2023-01-22 14:33:37	[Main thread]	INFO	LearningWithExternalStats	checkWsmdStatus	Max weighted SMD 4 3.21809071046855e-08
+2023-01-22 14:33:37	[Main thread]	INFO	LearningWithExternalStats	checkWsmdStatus	Max weighted SMD 5 1.73321253683795e-08
+2023-01-22 14:33:37	[Main thread]	INFO	LearningWithExternalStats	checkWsmdStatus	Max weighted SMD 6 1.16058220383299e-08
+2023-01-22 14:33:37	[Main thread]	INFO	LearningWithExternalStats	checkWsmdStatus	Max weighted SMD 7 0.0142200205594812
+2023-01-22 14:33:38	[Main thread]	INFO	LearningWithExternalStats	checkWsmdStatus	Max weighted SMD 8 8.81162749004178e-09
+2023-01-22 14:33:38	[Main thread]	INFO	LearningWithExternalStats	checkWsmdStatus	Max weighted SMD 9 1.04728345665448e-08
+2023-01-22 14:33:38	[Main thread]	INFO	LearningWithExternalStats	checkWsmdStatus	Max weighted SMD 10 2.33172383776042e-07
+2023-01-22 14:33:38	[Main thread]	INFO	LearningWithExternalStats	checkWsmdStatus	Max weighted SMD 11 3.66765156831944e-08
+2023-01-22 14:33:38	[Main thread]	INFO	LearningWithExternalStats	checkWsmdStatus	Max weighted SMD 12 0.0153360627446497
+2023-01-22 14:33:38	[Main thread]	INFO	LearningWithExternalStats	checkWsmdStatus	Max weighted SMD 13 0.00506469636508137
+2023-01-22 14:33:38	[Main thread]	INFO	LearningWithExternalStats	checkWsmdStatus	Max weighted SMD 14 4.07629469786799e-08
+2023-01-22 14:33:38	[Main thread]	INFO	LearningWithExternalStats	checkWsmdStatus	Max weighted SMD 15 0.00430017672162847
+2023-01-22 14:33:38	[Main thread]	INFO	LearningWithExternalStats	checkWsmdStatus	Max weighted SMD 16 6.1058725723225e-08
+2023-01-22 14:33:38	[Main thread]	INFO	LearningWithExternalStats	checkWsmdStatus	Max weighted SMD 17 1.66383106859847e-08
+2023-01-22 14:33:38	[Main thread]	INFO	LearningWithExternalStats	checkWsmdStatus	Max weighted SMD 18 0.00730220179087317
+2023-01-22 14:33:38	[Main thread]	INFO	LearningWithExternalStats	checkWsmdStatus	Max weighted SMD 19 0.014195935329752
+2023-01-22 14:33:38	[Main thread]	INFO	LearningWithExternalStats	checkWsmdStatus	Max weighted SMD 20 0.0087069526028912
+2023-01-22 14:33:38	[Main thread]	INFO	LearningWithExternalStats	checkWsmdStatus	Max weighted SMD 21 0.00316885996905296
+2023-01-22 14:33:38	[Main thread]	INFO	LearningWithExternalStats	checkWsmdStatus	Max weighted SMD 22 5.4681221517547e-08
+2023-01-22 14:33:38	[Main thread]	INFO	LearningWithExternalStats	checkWsmdStatus	Max weighted SMD 23 3.25935926169478e-09
+2023-01-22 14:33:38	[Main thread]	INFO	LearningWithExternalStats	checkWsmdStatus	Max weighted SMD 24 1.03752624994983e-07
+2023-01-22 14:33:38	[Main thread]	INFO	LearningWithExternalStats	checkWsmdStatus	Max weighted SMD 25 1.98403791365406e-08
+2023-01-22 14:33:38	[Main thread]	INFO	LearningWithExternalStats	checkWsmdStatus	Max weighted SMD 26 0.00107521401182314
+2023-01-22 14:33:38	[Main thread]	INFO	LearningWithExternalStats	checkWsmdStatus	Max weighted SMD 27 1.93070154643733e-08
+2023-01-22 14:33:38	[Main thread]	INFO	LearningWithExternalStats	checkWsmdStatus	Max weighted SMD 28 0.0126385083584049
+2023-01-22 14:33:38	[Main thread]	INFO	LearningWithExternalStats	checkWsmdStatus	Max weighted SMD 29 0.00208013710873351
+2023-01-22 14:33:38	[Main thread]	INFO	LearningWithExternalStats	checkWsmdStatus	Max weighted SMD 30 0.0297473109304733
+2023-01-22 14:33:38	[Main thread]	INFO	LearningWithExternalStats	checkWsmdStatus	Max weighted SMD 31 0.00360035438361784
+2023-01-22 14:33:38	[Main thread]	INFO	LearningWithExternalStats	checkWsmdStatus	Max weighted SMD 32 0.00447532383798448
+2023-01-22 14:33:38	[Main thread]	INFO	LearningWithExternalStats	checkWsmdStatus	Max weighted SMD 33 0.0016309053929263
+2023-01-22 14:33:38	[Main thread]	INFO	LearningWithExternalStats	checkWsmdStatus	Max weighted SMD 34 0.00434351218485983
+2023-01-22 14:33:38	[Main thread]	INFO	LearningWithExternalStats	checkWsmdStatus	Max weighted SMD 35 0.0102610536097281
+2023-01-22 14:33:38	[Main thread]	INFO	LearningWithExternalStats	checkWsmdStatus	Max weighted SMD 36 2.57782435649387e-08
+2023-01-22 14:33:38	[Main thread]	INFO	LearningWithExternalStats	checkWsmdStatus	Max weighted SMD 37 0.00632235368553105
+2023-01-22 14:33:38	[Main thread]	INFO	LearningWithExternalStats	checkWsmdStatus	Max weighted SMD 38 5.3666093537334e-08
+2023-01-22 14:33:38	[Main thread]	INFO	LearningWithExternalStats	checkWsmdStatus	Max weighted SMD 39 0.00257841880730429
+2023-01-22 14:33:38	[Main thread]	INFO	LearningWithExternalStats	checkWsmdStatus	Max weighted SMD 40 9.53499612076765e-09

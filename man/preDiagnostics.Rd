@@ -4,14 +4,12 @@
 \alias{preDiagnostics}
 \title{Pre re-weighting diagnostics}
 \usage{
-preDiagnostics(z, mu, maxProp, maxDiff, npMinRatio = 4)
+preDiagnostics(z, mu, maxDiff, npMinRatio = 4)
 }
 \arguments{
 \item{z}{a data frame of transformed feature-outcome pairs}
 
 \item{mu}{a vector of means of transformed feature-outcome pairs}
-
-\item{maxProp}{maximum proportion between internal and external means to determine imbalance}
 
 \item{maxDiff}{maximum difference from which to check max prop}
 

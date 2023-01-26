@@ -1,4 +1,4 @@
-wglmnet <- function(alpha=0.5, ntop=500) {
+wglmnet <- function(alpha=0.5, ntop=1000) {
   param <- list(alpha=alpha, ntop=ntop)
 
   result <- list(

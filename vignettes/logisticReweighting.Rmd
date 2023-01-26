@@ -74,14 +74,10 @@ can be `'dual'` or `'primal'`:
 
 ```{r, message=FALSE, warning=FALSE, eval=TRUE, results='hide'}
 externalEstimatorSettings <- createExternalEstimatorSettings(
-  divergence = 'entropy',  # entropy, chi2
-  lambda = 1e-1,
-  minW = 0,
-  optimizationMethod = 'dual',  # dual, primal
+  reweightAlgorithm = cvxWeightOptimizer(),
   stratifiedSampling = T,
   nMaxReweight = 10000,
   nRepetitions = 40,
-  maxProp = 500,
   outputDir = getwd(),
   maxCores = 3
   )

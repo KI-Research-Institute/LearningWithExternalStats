@@ -15,9 +15,12 @@ postDiagnostics(w, z, mu)
 }
 \value{
 a named list with the following:
-maxw
-TODO   W2
-kl
+\itemize{
+\item {\code{Max weight}:} {Maximal weight}
+\item {\code{chi2ToUnif}:} {Chi squared divergence between weights and a uniform distribution}
+\item {\code{kl}:} {KL distance to uniform distribution}
+\item {\code{Max Weighted SMD}:} {Maximum over features of SMD between internal set and external statistics}
+}
 }
 \description{
 compute diagnostics of weighted samples
