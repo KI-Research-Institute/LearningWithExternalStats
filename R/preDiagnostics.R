@@ -101,7 +101,11 @@ preCheckBinaryFeatures <- function(z, mu, includeFeatures) {
   binaryFeatures <- names(mu[includeBinaryFeatures])
   ParallelLogger::logInfo(glue('z has {length(binaryFeatures)} binary features'))
   highlySkewedBinary <- getHighlySkewedBinaryFeatures(mu[binaryFeatures], z[zidx, binaryFeatures])
-  return(list(includeFeatures=includeFeatures, zidx = zidx, highlySkewedBinary=highlySkewedBinary))
+  includeFeatures[binaryFeatures] <- highlySkewedBinary$includeFeature
+  return(list(
+    includeFeatures=includeFeatures,
+    zidx = zidx,
+    highlySkewedBinary=highlySkewedBinary$skewedNames))
 }
 
 
@@ -117,49 +121,42 @@ varProxy <- function(n, n1, muExt) {
 #' @param z data
 #' @param minNumReport minimum number of samples to report in the logger
 #'
-getHighlySkewedBinaryFeatures <- function(mu, z, minNumReport=20) {
+#' TODO better treatment cases in which binary values may not be 0 or 1. Transform to this form if needed
+#'
+getHighlySkewedBinaryFeatures <- function(mu, z, minNumReport=20, maxDiff=0.01) {
   imbalanced <- rep(F, length(mu))
-  propM <- rep(NA, length(mu))
+  includeFeatures <- rep(T, length(mu))
   n1s <- rep(NA, length(mu))
   varProxies <- rep(NA, length(mu))
 
-  if (!is.vector(z)) {
-    n <- nrow(z)
-    meanz <- colMeans(z)
-    for (i in 1:(length(mu))) {
-      minzi <- min(z[ , i])
-      maxzi <- max(z[ , i])
-      if (maxzi > minzi)
-        n1s[i] <- sum(z[ , i] == maxzi)
-      else {
-        if (minzi==0)
-          n1s[i] <- 0
-        else
-          n1s[i] <- n
-      }
-      propM[i] <- abs((mu[i]-minzi)/(meanz[i]-minzi))
+  if (is.vector(z))
+    z <- as.matrix(z)
+  n <- nrow(z)
+  meanz <- colMeans(z)
+  for (i in 1:(length(mu))) {
+    minzi <- min(z[ , i])
+    maxzi <- max(z[ , i])
+    if (maxzi > minzi) {  # feature i is still binary after removal of samples
+      n1s[i] <- sum(z[ , i] == maxzi)
       varProxies[i] <- varProxy(n, n1s[i], (mu[i]-minzi)/(maxzi-minzi))
       imbalanced[i] <- varProxies[i] > max(5/n, 0.0001)
     }
+    else {
+      if (minzi==0)
+        n1s[i] <- 0
+      else
+        n1s[i] <- n
+      imbalanced[i] <- abs(mu[i]-minzi) > maxDiff
+      varProxies[i] <- NA
+    }
   }
-  else {
-    n <- length(z)
-    meanz <- mean(z)
-    minz <- min(z)
-    maxz <- max(z)
-    n1s[1] <- sum(z==maxz)
-    propM[1] <- abs((mu[1]-minz)/(meanz-minz))
-    varProxies[1] <- varProxy(n, n1s[1], (mu[1]-minz)/(maxz-minz))
-    imbalanced[1] <- varProxies[1] > max(5/n, 0.0001)
-  }
-  skewedNames <- names(mu[imbalanced])
   if (sum(imbalanced) > 0) {
     if (F) {  # TODO Aggregated skewed features, consider this
-    reportDf <- data.frame(matrix(ncol=2, nrow=sum(imbalanced)))
-    rownames(reportDf) <- names(mu[imbalanced])
-    colnames(reportDf) <- c('Int', 'Ext')
-    reportDf[[1]] <- meanz[imbalanced]
-    reportDf[[2]] <- mu[imbalanced]
+      reportDf <- data.frame(matrix(ncol=2, nrow=sum(imbalanced)))
+      rownames(reportDf) <- names(mu[imbalanced])
+      colnames(reportDf) <- c('Int', 'Ext')
+      reportDf[[1]] <- meanz[imbalanced]
+      reportDf[[2]] <- mu[imbalanced]
     }
     for (i in which(imbalanced)) {
       f <- names(mu)[i]
@@ -171,11 +168,14 @@ getHighlySkewedBinaryFeatures <- function(mu, z, minNumReport=20) {
         n1sStr <- glue('={n1s[i]}')
         meanStr <- glue('={format(meanz[i], digits=3)}')
       }
-      ParallelLogger::logWarn(
-        glue('Skewed feature {f}: n={n} n1{n1sStr} mean{meanStr} mu={smu}'))
+      if (mu[i] < maxDiff)  # in this case both mu and n1 are small
+        includeFeatures[i] <- F
+      else
+        ParallelLogger::logWarn(glue('Skewed feature {f}: n={n} n1{n1sStr} mean{meanStr} mu={smu}'))
     }
   }
-  return(skewedNames)
+  skewedNames <- names(mu[imbalanced & includeFeatures])
+  return(list(skewedNames=skewedNames, includeFeatures=includeFeatures))
 }
 
 

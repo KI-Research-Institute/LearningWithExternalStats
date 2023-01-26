@@ -401,21 +401,28 @@ estimateFullSetPerformance <- function(internalData, externalStats, estimationPa
   }
 
   w <- reweightResults$w_hat
-  if (reweightResults$status == 'Success' && sum(is.na(w))==0) {
-    widx <- w>0
-    dbRes[['n']] <- sum(widx)
-    if (is.factor(internalData$y)) # TODO is this the right place
-      internalData$y <- as.numeric(internalData$y)-1
-    dbRes[['n outcome']] <- as.numeric(t(widx) %*% internalData$y)
-    # Post diagnostics
-    postD <- postDiagnostics(w, internalData$z, externalStats)
-    dbRes <- c(dbRes, postD)
-    # Performance measures
-    m <- getPerformanceMeasures(internalData$y[widx], internalData$p[widx], w[widx])
-    dbRes <- c(dbRes, m)
-    return (list(dbRes=(unlist(dbRes)), reweightResults=reweightResults))
-  } else {
-    ParallelLogger::logWarn('Optimizer failed or w contains NA')
+  if (reweightResults$status == 'Success') {
+    if (sum(is.na(w))==0) {
+      widx <- w>0
+      dbRes[['n']] <- sum(widx)
+      if (is.factor(internalData$y)) # TODO is this the right place
+        internalData$y <- as.numeric(internalData$y)-1
+      dbRes[['n outcome']] <- as.numeric(t(widx) %*% internalData$y)
+      # Post diagnostics
+      postD <- postDiagnostics(w, internalData$z, externalStats)
+      dbRes <- c(dbRes, postD)
+      # Performance measures
+      m <- getPerformanceMeasures(internalData$y[widx], internalData$p[widx], w[widx])
+      dbRes <- c(dbRes, m)
+      return (list(dbRes=(unlist(dbRes)), reweightResults=reweightResults))
+    }
+    else {
+      ParallelLogger::logWarn('w containtes NA')
+      return(NULL)
+    }
+  }
+  else {
+    ParallelLogger::logWarn('Optimizer status != Success')
     return (NULL)
   }
 }
