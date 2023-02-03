@@ -11,15 +11,15 @@
 #' @param momentumC momentum parameter
 #' @param approxUpdate using 1+x instead of exp(x), currently disabled
 #' @param maxErr alternative stopping criterion: error of the maximum statistic
-#' @param nesterov use Nesterov momentum (Boolean)
+#' @param experimental use experimental method (Boolean)
 #' @param maxSuccessMSE maximum MSE that is considered successful convergence
 #'
 #' @return an object of class \code{seTunedWeightOptimizer}
 #'
 #' @export
 seTunedWeightOptimizer <- function(
-    alphas = c(0.01, 0.03, 0.1, 0.3, 0.5), minSd=1e-4, w0 = NULL,  nTuneIter=25, nIter=500, outputDir=NULL,
-    improveTh=1e-4, momentumC=0.9, approxUpdate=F, maxErr=1, nesterov=F, maxSuccessMSE=0.1)
+    alphas = c(0.01, 0.03, 0.1, 0.3, 0.5), minSd=1e-4, w0 = NULL,  nTuneIter=50, nIter=1000, outputDir=NULL,
+    improveTh=1e-4, momentumC=0.9, approxUpdate=F, maxErr=0.1, experimental=F, maxSuccessMSE=1e-4)
 {
   l <- list(
     shortName = 'W-MSE',
@@ -36,7 +36,7 @@ seTunedWeightOptimizer <- function(
     optimize = optimizeSEWeightsTuned,
     setInitialValue = setInitialW,
     maxErr = maxErr,
-    nesterov = nesterov,
+    experimental = experimental,
     maxSuccessMSE = maxSuccessMSE
   )
   class(l) <- 'seTunedWeightOptimizer'
@@ -63,17 +63,35 @@ setInitialW <- function(wOptimizer, results) {
 #'
 optimizeSEWeightsTuned <- function(wOptimizer, Z, mu)
 {
+  # Normalize if not all columns are binary
+  isBinary <- apply(Z, 2,function(x) {all(x %in% c(0, 1))})
+  if (!all(isBinary)) {
+    normalized <- normalizeDataAndExpectations(Z, mu, wOptimizer$minSd)  # TODO
+    rm(list=c('Z', 'mu'))
+    gc()
+    Z <- normalized$Z
+    mu <- normalized$mu
+  }
+  Z <- as.matrix(Z)
+
+  # Get initinal error
+  rr <- colMeans(Z) - mu
+  err <- sum(rr**2)
+  ParallelLogger::logInfo(glue('Initial err {err}'))
+
+  tuneImproveTh <- 1e-8
+  # Initialize optimizer
   tOptimizer <- seOptimizer(
     minSd = wOptimizer$minSd,
     nIter = wOptimizer$nTuneIter,
     outputDir = wOptimizer$outputDir,
-    improveTh = wOptimizer$improveTh,
+    improveTh = tuneImproveTh,
     w0 = wOptimizer$w0,
     alpha = NULL,
     momentumC = wOptimizer$momentumC,
     approxUpdate = wOptimizer$approxUpdate,
     maxErr = wOptimizer$maxErr,
-    nesterov = wOptimizer$nesterov,
+    experimental = wOptimizer$experimental,
     maxSuccessMSE = wOptimizer$maxSuccessMSE
   )
 
@@ -88,7 +106,7 @@ optimizeSEWeightsTuned <- function(wOptimizer, Z, mu)
     totalIter <- totalIter + nrow(r$log)
     if (is.na(r$err))
       break
-    if (r$err < wOptimizer$improveTh) {
+    if (r$err < tuneImproveTh) {
       r$totalIter <- totalIter
       return(r)
     }
@@ -107,6 +125,7 @@ optimizeSEWeightsTuned <- function(wOptimizer, Z, mu)
   k <- which.min(o)
 
   fOptimizer <- tOptimizer
+  fOptimizer$improveTh <- wOptimizer$improveTh
   fOptimizer$nIter <- wOptimizer$nIter
   fOptimizer$alpha <- wOptimizer$alphas[k]
 
@@ -124,7 +143,7 @@ optimizeSEWeightsTuned <- function(wOptimizer, Z, mu)
 
 seOptimizer <- function(
     minSd=1e-4, w0 = NULL,  nIter=1000, outputDir=NULL, improveTh=1e-4, alpha=0.1, momentumC=0.9, approxUpdate=F,
-    maxErr = 0.01, nesterov=F, maxSuccessMSE=0.1)
+    maxErr = 0.01, experimental=F, maxSuccessMSE=0.1)
 {
   l <- list(
     minSd = minSd,
@@ -137,7 +156,7 @@ seOptimizer <- function(
     approxUpdate = approxUpdate,
     maxErr = maxErr,
     w0 = w0,
-    nesterov = nesterov,
+    experimental = experimental,
     maxSuccessMSE = maxSuccessMSE
   )
   class(l) <- 'seOptimizer'
@@ -154,11 +173,9 @@ optimizeSEWeights <- function(wOptimizer, Z, mu) {
   alpha <- wOptimizer$alpha
   n <- nrow(Z)
   m <- ncol(Z)
-  Y <- Z[['Y']]
+  Y <- Z[ ,'Y']
   momentumC <- wOptimizer$momentumC
   v <- rep(0, n)  # momentum velocity
-
-  # normalized <- normalizeDataAndExpectations(Z, mu, wOptimizer$minSd)  # TODO
 
   maxIter <- wOptimizer$nIter
   l <- matrix(nrow = maxIter, ncol = 3)  # Optimization log
@@ -170,7 +187,6 @@ optimizeSEWeights <- function(wOptimizer, Z, mu) {
   else
     w <- rep(1/n, n)  # Start with uniform weights
 
-  Z <- as.matrix(Z)
   # a heuristic initialization that sets weights according to Y
   idx1 <- Y==1
   idx0 <- Y==0
@@ -183,6 +199,9 @@ optimizeSEWeights <- function(wOptimizer, Z, mu) {
   muHat <- t(Z) %*% w  # estimated means
   rr <- muHat[ ,1] - mu
   err <- sum(rr**2)
+  s <- min(err, 1)
+  wOptimizer$improveTh <- wOptimizer$improveTh * s  # require relative improvement
+
   kl <- log(n) + t(w) %*% log(w)  # TODO change the reference to a class wise
   l[1, 1] <- err
   l[1, 2] <- kl
@@ -191,24 +210,11 @@ optimizeSEWeights <- function(wOptimizer, Z, mu) {
   g <- Z %*% rr  # * 2  #
   for (i in 2:maxIter) {
 
-    if (!wOptimizer$nesterov) {
-      g <- Z %*% rr  # ignoring factor 2
-      v <- momentumC * v + g
-      w <- w * exp(- alpha * v)
-      w <- w/sum(w)
+    g <- Z %*% rr  # ignoring factor 2
+    v <- momentumC * v + g
+    w <- w * exp(- alpha * v)
+    w <- w/sum(w)
 
-    } else {  # Nesterov momentum
-      # First advance by the momentum and then compute the gradient there
-      wbar <- w * exp(momentumC * v)
-      wbar <- wbar/sum(wbar)
-      muHat <- t(Z) %*% wbar
-      rr <- muHat[, 1] - mu
-      g <- Z %*% rr  # * 2  #
-
-      v <- momentumC * v - alpha * g
-      w <- w * exp(v)
-      w <- w/sum(w)
-    }
     muHat <- t(Z) %*% w
     rr <- muHat[, 1] - mu
     err <- sum(rr**2)
@@ -221,7 +227,8 @@ optimizeSEWeights <- function(wOptimizer, Z, mu) {
       l[i,2] <- kl
     }
     if (is.na(err)) {
-      return(list(w_hat=w*n, err=Inf, log=l))
+      ParallelLogger::logInfo('NA objective')
+      return(list(w_hat=w*n, err=Inf, log=l, status = 'NA-objective'))
     }
     if ((err < wOptimizer$improveTh) && (maxAbsErr < wOptimizer$maxErr))
       break

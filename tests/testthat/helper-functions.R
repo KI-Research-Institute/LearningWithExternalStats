@@ -15,7 +15,8 @@ estimatePerformanceWithInternalData <- function(z, pInternal, muExt, wOptimizer)
     reweightAlgorithm = wOptimizer,
     nMaxReweight = nrow(z),
     nRepetitions = 2,
-    maxCores = 1
+    maxCores = 1,
+    maxWSMD = 0.2
   )
   internalData <- list(z=z, p = pInternal, y = z[['Y']])  # TODO consider changing the api
 

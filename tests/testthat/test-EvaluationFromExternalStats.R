@@ -30,7 +30,7 @@ test_that("estimated AUC is in range", {
   pExternal <- predictGLM(d$externalTest, model1)
   externalAUC <- as.numeric(auc(roc(d$externalTest[['Y']], pExternal, direction = "<", quiet = T)))
 
-  wOptimizer = seTunedWeightOptimizer()
+  wOptimizer = seTunedWeightOptimizer(maxSuccessMSE=5e-4)
   estimatedAUC <- estimateExternalAUCWithInternalData(dTransformedInt, pInternal, muExt, wOptimizer)
   expect_equal(estimatedAUC, externalAUC, tolerance = 0.07)
 
@@ -40,7 +40,7 @@ test_that("estimated AUC is in range", {
 # Robustness to exclusions
 
 
-test_that("algorithm is robust to missing stats", {
+test_that("algorithm detects missing stats", {
 
   replaceSimpleLoggerThreshold('WARN')
 
@@ -59,12 +59,12 @@ test_that("algorithm is robust to missing stats", {
 
   wOptimizer <- seTunedWeightOptimizer()
   estimatedAUC <- estimateExternalAUCWithInternalData(dTransformedInt, pInternal, reducedMu, wOptimizer)
-  expect_equal(estimatedAUC, externalAUC, tolerance = 0.05)
+  expect_null(estimatedAUC)
 
 })
 
 
-test_that("algorithm is robust to missing internal features", {
+test_that("algorithm detects missing internal features", {
 
   replaceSimpleLoggerThreshold('WARN')
 
@@ -82,7 +82,7 @@ test_that("algorithm is robust to missing internal features", {
 
   wOptimizer <- seTunedWeightOptimizer()
   estimatedAUC <- estimateExternalAUCWithInternalData(zReduced, pInternal, muExt, wOptimizer)
-  expect_equal(estimatedAUC, externalAUC, tolerance = 0.05)
+  expect_null(estimatedAUC)
 })
 
 
@@ -143,7 +143,7 @@ test_that("package caputures the status", {
   pExternal <- predictGLM(d$externalTest, model1)
   externalAUC <- as.numeric(auc(roc(d$externalTest[['Y']], pExternal, direction = "<", quiet = T)))
 
-  wOptimizer = seTunedWeightOptimizer()
+  wOptimizer = seTunedWeightOptimizer(maxSuccessMSE=5e-4)
   estimation1 <- estimatePerformanceWithInternalData(dTransformedInt, pInternal, muExt, wOptimizer)
   expect_equal(estimation1$status=='Success', T)
 

@@ -35,7 +35,7 @@ createExternalEstimatorSettings <- function(
     nRepetitions = 1,
     stratifiedSampling = T,
     maxDiff = 0.01,
-    maxWSMD = 0.2,
+    maxWSMD = 0.1,
     outputDir = getwd(),
     maxCores = 1,
     shortName = NULL,

@@ -9,15 +9,15 @@ seTunedWeightOptimizer(
   alphas = c(0.01, 0.03, 0.1, 0.3, 0.5),
   minSd = 1e-04,
   w0 = NULL,
-  nTuneIter = 25,
-  nIter = 500,
+  nTuneIter = 50,
+  nIter = 1000,
   outputDir = NULL,
   improveTh = 1e-04,
   momentumC = 0.9,
   approxUpdate = F,
-  maxErr = 1,
-  nesterov = F,
-  maxSuccessMSE = 0.1
+  maxErr = 0.1,
+  experimental = F,
+  maxSuccessMSE = 1e-04
 )
 }
 \arguments{
@@ -41,7 +41,7 @@ seTunedWeightOptimizer(
 
 \item{maxErr}{alternative stopping criterion: error of the maximum statistic}
 
-\item{nesterov}{use Nesterov momentum (Boolean)}
+\item{experimental}{use experimental method (Boolean)}
 
 \item{maxSuccessMSE}{maximum MSE that is considered successful convergence}
 }

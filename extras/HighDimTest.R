@@ -11,19 +11,21 @@ setwd(script_dir)
 source('./offset-test.R')
 
 # cfg <- list(p=100, n=2000, outcomeOffsets=-log(c(2)))  # 1
-# cfg <- list(p=100, n=5000, outcomeOffsets=-log(c(2)))  # 1
+# cfg <- list(p=100, n=5000, outcomeOffsets=-log(c(5)))  # 1
+# cfg <-list(p=100, n=3e5, outcomeOffsets=-log(c(250)))  # 16
+# cfg <-list(p=200, n=3e5, outcomeOffsets=-log(c(250)))  # 16
 cfg <-list(p=500, n=3e5, outcomeOffsets=-log(c(250)))  # 16
 # cfg <-list(p=1000, n=3e5, outcomeOffsets=-log(c(250)))
 nTest <- 10
-loadCached = T
+loadCached = F
 
 
 getGeneralizationTestsParams <- function(outputDir) {
 
-  nrep <- 15
+  nrep <- 30
 
   esti  <- createExternalEstimatorSettings(
-    reweightAlgorithm = seTunedWeightOptimizer(outputDir=outputDir),
+    reweightAlgorithm = seTunedWeightOptimizer(outputDir=outputDir, nIter=2000),
     nRepetitions = nrep,
     outputDir = outputDir,
     maxCores = 15
@@ -41,10 +43,10 @@ getGeneralizationTestsParams <- function(outputDir) {
     # Simulation model
     outcomeOffset = NA,  # offset of the outcome logistic model, determines outcome prevalence
     sigma_B_X_AH = NA,  # degree of porximity assumption violation
-    sigma_B_Y_X_factor = 4,
-    sigma_B_Y_XA_factor = 4,
-    loadCached = F,  # load or train from scratch
-    envOffset = 5,
+    sigma_B_Y_X_factor = 0.8,  # Testing smaller factor means less predictive power of variables ...
+    sigma_B_Y_XA_factor = 0.4,  # Testing ...
+    loadCached = loadCached,  # load or train from scratch
+    envOffset = 1,  # Testing ...
     # Estimation model
     trainer = wglmnet(),  # wXGBoost()
     outputDir = outputDir,
