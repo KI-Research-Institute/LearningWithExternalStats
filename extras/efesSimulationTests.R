@@ -133,7 +133,7 @@ testSimulatedData <- function(testParams, testNum) {
   # Generate a single test set for different configuration
   # TODO change the parameters structure
   dataFileName <- file.path(
-    testParams$outputDir, glue('data_{getDataName(testParams)}_{testParams$trainer$name}_{testNum}.rds'))
+    testParams$dataDir, glue('data_{getTestName(testParams)}_{testNum}.rds'))
   cat('data file name:', dataFileName, '\n')
 
   if (testParams$loadCached) {
@@ -287,17 +287,15 @@ repeatedTests <- function(params) {
 }
 
 
-getDataName <- function(params) {
-  dataName <- glue("n{params$n}-p{params$p}-top{params$ntop}-o{exp(params$outcomeOffset)}")
-  dataName <- glue("{dataName}-vi{params$sigma_B_X_AH}")
-  return(dataName)
-}
+# getDataName <- function(params) {
+#   dataName <- glue("n{params$n}-p{params$p}-top{params$ntop}-o{exp(params$outcomeOffset)}")
+#   dataName <- glue("{dataName}-vi{params$sigma_B_X_AH}")
+#   return(dataName)
+#}
 
 
 getTestName <- function(params) {
-  testName <- getDataName(params)
-  # testName <- glue("{testName}-{params$estimationParams[[2]]$nMaxReweight}-{params$estimationParams[[2]]$nRepetitions}")
-  # testName <- glue("{testName}-{params$estimationParams[[2]]$nIter}-{params$estimationParams[[2]]$batchSize}")
-  testName <- glue("{testName}-{params$trainer$name}")
+  testName <- getModelName(params)
+  testName <- glue("{testName}-{params$trainer$name}-vi{params$sigma_B_X_AH}")
   return(testName)
 }

@@ -10,53 +10,34 @@ script_dir <- dirname(rstudioapi::getSourceEditorContext()$path)
 setwd(script_dir)
 source('./offset-test.R')
 
-# cfg <- list(p=100, n=2000, outcomeOffsets=-log(c(2)))  # 1
-# cfg <- list(p=100, n=5000, outcomeOffsets=-log(c(5)))  # 1
-# cfg <-list(p=100, n=3e5, outcomeOffsets=-log(c(250)))  # 16
-# cfg <-list(p=200, n=3e5, outcomeOffsets=-log(c(250)))  # 16
-cfg <-list(p=500, n=3e5, outcomeOffsets=-log(c(250)))  # 16
-# cfg <-list(p=1000, n=3e5, outcomeOffsets=-log(c(250)))
+# Parameters
 nTest <- 10
 loadCached = F
 
+testParams <- list(
+  binary = T, # type of covariates
+  p=2,
+  n=2000,
+  outcomeOffset = -log(2),
+  sigma_B_Y_X_factor = 3,  # Testing smaller factor means less predictive power of variables ...
+  sigma_B_Y_XA_factor = 3,  # Testing ...
+  envOffset = 1,  # Testing ...
+  loadCached = loadCached,  # load or train from scratch
+  trainer = wglmnet()  # wXGBoost()
+)
+# modelParams[c('p', 'n', 'outcomeOffset')] <- c(2, 3e-5, -log(250))
 
-getGeneralizationTestsParams <- function(outputDir) {
+modelName <- getModelName(testParams)
+outputDir <- file.path('D:/projects/robustness/bench01', modelName)
+dataDir <- file.path('D:/projects/robustness/evaluationData', modelName)
 
-  nrep <- 30
+esti  <- createExternalEstimatorSettings(
+  reweightAlgorithm = seTunedWeightOptimizer(outputDir=outputDir),
+  nRepetitions = 15,
+  outputDir = outputDir,
+  maxCores = 15
+)
+estimationParams <- vector(mode = 'list', length = 1)
+estimationParams[[1]] <- esti
 
-  esti  <- createExternalEstimatorSettings(
-    reweightAlgorithm = seTunedWeightOptimizer(outputDir=outputDir, nIter=2000),
-    nRepetitions = nrep,
-    outputDir = outputDir,
-    maxCores = 15
-  )
-
-  estimationParams <- vector(mode = 'list', length = 1)
-  estimationParams[[1]] <- esti
-
-  testParams <- list(
-    n = NA,  # number of samples in train and tests sets
-    p = NA,  # number of features
-    binary = T, # type of covariates
-    ntop = 1000,  # number of features used in estimation of external performance
-    nTest = nTest,  # number of tests
-    # Simulation model
-    outcomeOffset = NA,  # offset of the outcome logistic model, determines outcome prevalence
-    sigma_B_X_AH = NA,  # degree of porximity assumption violation
-    sigma_B_Y_X_factor = 0.8,  # Testing smaller factor means less predictive power of variables ...
-    sigma_B_Y_XA_factor = 0.4,  # Testing ...
-    loadCached = loadCached,  # load or train from scratch
-    envOffset = 1,  # Testing ...
-    # Estimation model
-    trainer = wglmnet(),  # wXGBoost()
-    outputDir = outputDir,
-    # Reweighing parameters
-    estimationParams = estimationParams
-  )
-  return(testParams)
-}
-
-
-testParams <- getGeneralizationTestsParams(outputDir = glue('D:/projects/robustness/offset-test-{cfg$n}-{cfg$p}'))
-
-proximityAndOffsetTests(cfg, testParams, nTest, loadCached)  # TODO why is there a duplication in nTest?
+proximityAndOffsetTests(testParams, estimationParams, nTest, loadCached, outputDir, dataDir)

@@ -7,10 +7,10 @@
 #' @param nTuneIter number of iterations for tuning
 #' @param nIter maximum number of iterations
 #' @param outputDir output directory for logging
-#' @param improveTh required accuracy
+#' @param absTol required accuracy
 #' @param momentumC momentum parameter
 #' @param approxUpdate using 1+x instead of exp(x), currently disabled
-#' @param maxErr alternative stopping criterion: error of the maximum statistic
+#' @param absMaxUnivariateTol alternative stopping criterion: error of the maximum statistic
 #' @param experimental use experimental method (Boolean)
 #' @param maxSuccessMSE maximum MSE that is considered successful convergence
 #'
@@ -18,8 +18,8 @@
 #'
 #' @export
 seTunedWeightOptimizer <- function(
-    alphas = c(0.01, 0.03, 0.1, 0.3, 0.5), minSd=1e-4, w0 = NULL,  nTuneIter=50, nIter=1000, outputDir=NULL,
-    improveTh=1e-4, momentumC=0.9, approxUpdate=F, maxErr=0.1, experimental=F, maxSuccessMSE=1e-4)
+    alphas = c(0.01, 0.03, 0.1, 0.3, 0.5), minSd=1e-4, w0 = NULL,  nTuneIter=50, nIter=2000, outputDir=NULL,
+    absTol=1e-8, momentumC=0.9, approxUpdate=F, absMaxUnivariateTol=1e-9, experimental=F, maxSuccessMSE=1e-4)
 {
   l <- list(
     shortName = 'W-MSE',
@@ -29,13 +29,13 @@ seTunedWeightOptimizer <- function(
     nTuneIter = nTuneIter,
     nIter = nIter,
     outputDir = outputDir,
-    improveTh = improveTh,
+    absTol = absTol,
     alpha = NULL,
     momentumC = momentumC,
     approxUpdate = approxUpdate,
     optimize = optimizeSEWeightsTuned,
     setInitialValue = setInitialW,
-    maxErr = maxErr,
+    absMaxUnivariateTol = absMaxUnivariateTol,
     experimental = experimental,
     maxSuccessMSE = maxSuccessMSE
   )
@@ -79,18 +79,17 @@ optimizeSEWeightsTuned <- function(wOptimizer, Z, mu)
   err <- sum(rr**2)
   ParallelLogger::logInfo(glue('Initial err {err}'))
 
-  tuneImproveTh <- 1e-8
   # Initialize optimizer
   tOptimizer <- seOptimizer(
     minSd = wOptimizer$minSd,
     nIter = wOptimizer$nTuneIter,
     outputDir = wOptimizer$outputDir,
-    improveTh = tuneImproveTh,
+    absTol = wOptimizer$absTol,
     w0 = wOptimizer$w0,
     alpha = NULL,
     momentumC = wOptimizer$momentumC,
     approxUpdate = wOptimizer$approxUpdate,
-    maxErr = wOptimizer$maxErr,
+    absMaxUnivariateTol = wOptimizer$absMaxUnivariateTol,
     experimental = wOptimizer$experimental,
     maxSuccessMSE = wOptimizer$maxSuccessMSE
   )
@@ -106,7 +105,7 @@ optimizeSEWeightsTuned <- function(wOptimizer, Z, mu)
     totalIter <- totalIter + nrow(r$log)
     if (is.na(r$err))
       break
-    if (r$err < tuneImproveTh) {
+    if ((r$err < wOptimizer$absTol) || (r$maxAbsErr < wOptimizer$absMaxUnivariateTol)) {
       r$totalIter <- totalIter
       return(r)
     }
@@ -125,7 +124,7 @@ optimizeSEWeightsTuned <- function(wOptimizer, Z, mu)
   k <- which.min(o)
 
   fOptimizer <- tOptimizer
-  fOptimizer$improveTh <- wOptimizer$improveTh
+  fOptimizer$absTol <- wOptimizer$absTol
   fOptimizer$nIter <- wOptimizer$nIter
   fOptimizer$alpha <- wOptimizer$alphas[k]
 
@@ -142,19 +141,19 @@ optimizeSEWeightsTuned <- function(wOptimizer, Z, mu)
 
 
 seOptimizer <- function(
-    minSd=1e-4, w0 = NULL,  nIter=1000, outputDir=NULL, improveTh=1e-4, alpha=0.1, momentumC=0.9, approxUpdate=F,
-    maxErr = 0.01, experimental=F, maxSuccessMSE=0.1)
+    minSd=1e-4, w0 = NULL,  nIter=1000, outputDir=NULL, absTol=1e-9, alpha=0.1, momentumC=0.9, approxUpdate=F,
+    absMaxUnivariateTol = 1e-5, experimental=F, maxSuccessMSE=0.1)
 {
   l <- list(
     minSd = minSd,
     nIter = nIter,
     optimize = optimizeSEWeights,
     outputDir = outputDir,
-    improveTh = improveTh,
+    absTol = absTol,
     alpha = alpha,
     momentumC=momentumC,
     approxUpdate = approxUpdate,
-    maxErr = maxErr,
+    absMaxUnivariateTol = absMaxUnivariateTol,
     w0 = w0,
     experimental = experimental,
     maxSuccessMSE = maxSuccessMSE
@@ -199,8 +198,6 @@ optimizeSEWeights <- function(wOptimizer, Z, mu) {
   muHat <- t(Z) %*% w  # estimated means
   rr <- muHat[ ,1] - mu
   err <- sum(rr**2)
-  s <- min(err, 1)
-  wOptimizer$improveTh <- wOptimizer$improveTh * s  # require relative improvement
 
   kl <- log(n) + t(w) %*% log(w)  # TODO change the reference to a class wise
   l[1, 1] <- err
@@ -230,14 +227,15 @@ optimizeSEWeights <- function(wOptimizer, Z, mu) {
       ParallelLogger::logInfo('NA objective')
       return(list(w_hat=w*n, err=Inf, log=l, status = 'NA-objective'))
     }
-    if ((err < wOptimizer$improveTh) && (maxAbsErr < wOptimizer$maxErr))
+    if ((err < wOptimizer$absTol) || (maxAbsErr < wOptimizer$absMaxUnivariateTol))
       break
   }
-  idx0 <- w<=1e-9  # TODO -
+  minWTh <- 1e-10
+  idx0 <- w<=minWTh  # TODO -
   n0 <- sum(idx0)
   if (n0>0) {
     ParallelLogger::logInfo(glue('{n0} weights = 0'))
-    w[idx0] <- 1e-9
+    w[idx0] <- minWTh
     w <- w/sum(w)
   }
   l[i, 2] <- log(n) + t(w) %*% log(w)
@@ -247,7 +245,7 @@ optimizeSEWeights <- function(wOptimizer, Z, mu) {
     status = 'Success'
   else
     status = 'Not-converged'
-  r <- list(w_hat=n*w, err=err, log=l, status=status)
+  r <- list(w_hat=n*w, err=err, log=l, status=status, maxAbsErr=maxAbsErr)
   ParallelLogger::logInfo(glue('Finished at {i}\terr {err}\tkl {l[i,2]}\tmax {l[i,3]} status={status}'))
   return(r)
 }

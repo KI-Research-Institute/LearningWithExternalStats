@@ -10,12 +10,12 @@ seTunedWeightOptimizer(
   minSd = 1e-04,
   w0 = NULL,
   nTuneIter = 50,
-  nIter = 1000,
+  nIter = 2000,
   outputDir = NULL,
-  improveTh = 1e-04,
+  absTol = 1e-08,
   momentumC = 0.9,
   approxUpdate = F,
-  maxErr = 0.1,
+  absMaxUnivariateTol = 1e-09,
   experimental = F,
   maxSuccessMSE = 1e-04
 )
@@ -33,13 +33,13 @@ seTunedWeightOptimizer(
 
 \item{outputDir}{output directory for logging}
 
-\item{improveTh}{required accuracy}
+\item{absTol}{required accuracy}
 
 \item{momentumC}{momentum parameter}
 
 \item{approxUpdate}{using 1+x instead of exp(x), currently disabled}
 
-\item{maxErr}{alternative stopping criterion: error of the maximum statistic}
+\item{absMaxUnivariateTol}{alternative stopping criterion: error of the maximum statistic}
 
 \item{experimental}{use experimental method (Boolean)}
 

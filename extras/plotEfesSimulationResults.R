@@ -56,6 +56,7 @@ plotPropoertiesBox <- function(outputDir, testname, legendLabels) {
 
 plotPropertyBox <- function(outputDir, testname, legendLabels, p) {
 
+  cat('Reading', file.path(outputDir, glue('{testname}.csv')), '\n')
   r = read.csv(file.path(outputDir, glue('{testname}.csv')))
   # print(r)
   n <- nrow(r)
@@ -69,6 +70,7 @@ plotPropertyBox <- function(outputDir, testname, legendLabels, p) {
     runTimes[, i] <- c
   }
 
+  cat('Writing', file.path(outputDir, glue('{testname} {p}.png')), '\n')
   png(filename = file.path(outputDir, glue('{testname} {p}.png')), width = 480, height = 480)
   boxplot(runTimes, col = colors[1:k], ylab = p, log='y')
   if (p=='Estimation.Time')
@@ -85,7 +87,7 @@ plotOffsetResults <- function(outputDir, summaryName, legendLabels) {
     metricErr <- read.csv(file.path(outputDir, glue('{summaryName} {metric}.csv')))
     metricErr <- metricErr[, 2:ncol(metricErr)]  # TODO save without index
     logName <- glue('{summaryName} {metric}.png')
-    png(filename = file.path(testParams$outputDir, logName), width = 480, height = 480)
+    png(filename = file.path(outputDir, logName), width = 480, height = 480)
     boxplot(t(metricErr), col = colors[1:k], ylab=metric)
     lines(c(0, nrow(metricErr)+1), c(0, 0), col='black')
     # legend('topright', fill = colors[1:k], legend=legendLabels, cex=1, inset=0.02)
