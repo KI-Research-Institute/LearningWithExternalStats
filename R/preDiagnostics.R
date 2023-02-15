@@ -3,16 +3,24 @@
 #'
 #' @description compare external expectations and internal means before reweighting
 #'
+#' The following tests are made:
+#' 1. z and mu have the same set of variables
+#' 2. z and mu do not contain NA entries
+#' 3. skew in binary features
+#'
+#' Additionally, internal samples are removed when ...
+#'
 #' @param z a data frame of transformed feature-outcome pairs
 #' @param mu a vector of means of transformed feature-outcome pairs
 #' @param maxDiff maximum difference from which to check max prop
 #' @param npMinRatio minimum ratio between number of features and number of examples
+#' @param maxSubset=20000
 #'
 #' @return a named list with the following fields:
 #' ...
 #'
 #' @export
-preDiagnostics <- function(z, mu, maxDiff, npMinRatio = 4) {
+preDiagnostics <- function(z, mu, maxDiff, npMinRatio = 4, maxSubset=20000) {
   nInput <- nrow(z)
   pInput <- ncol(z)
 
@@ -33,7 +41,7 @@ preDiagnostics <- function(z, mu, maxDiff, npMinRatio = 4) {
   }
   includeFeatures <- !naInMu
   # Regardless of Na status in mu, perform other tests
-  binaryResults <- preCheckBinaryFeatures(z, mu, includeFeatures)
+  binaryResults <- preCheckBinaryFeatures(z, mu, includeFeatures, maxSubset = maxSubset)
   unaryResults <- preCheckUnaryFeatures(z, mu, binaryResults, maxUnaryDiff = maxDiff)
   includeFeatures <- unaryResults$includeFeatures
 
@@ -79,7 +87,7 @@ preDiagnostics <- function(z, mu, maxDiff, npMinRatio = 4) {
 }
 
 
-preCheckBinaryFeatures <- function(z, mu, includeFeatures) {
+preCheckBinaryFeatures <- function(z, mu, includeFeatures, maxSubset=20000) {
   n1 <- nrow(z)
   binaryFeatureIndicators <- apply(z, 2, function(c) {length(unique(c))==2})
   binaryFeatureIndicators <- binaryFeatureIndicators & includeFeatures
@@ -101,7 +109,8 @@ preCheckBinaryFeatures <- function(z, mu, includeFeatures) {
   includeBinaryFeatures <- binaryFeatureIndicators & includeFeatures
   binaryFeatures <- names(mu[includeBinaryFeatures])
   ParallelLogger::logInfo(glue('z has {length(binaryFeatures)} binary features'))
-  highlySkewedBinary <- getHighlySkewedBinaryFeatures(mu[binaryFeatures], z[zidx, binaryFeatures])
+  highlySkewedBinary <- getHighlySkewedBinaryFeatures(
+    mu[binaryFeatures], z[zidx, binaryFeatures], maxSubset = maxSubset)
   includeFeatures[binaryFeatures] <- highlySkewedBinary$includeFeature
   return(list(
     includeFeatures=includeFeatures,
@@ -121,10 +130,12 @@ varProxy <- function(n, n1, muExt) {
 #' @param mu expectations
 #' @param z data
 #' @param minNumReport minimum number of samples to report in the logger
+#' @param maxDiff max difference in the unary case
+#' @param maxSubset assumption about the maximum subset size
 #'
 #' TODO better treatment cases in which binary values may not be 0 or 1. Transform to this form if needed
 #'
-getHighlySkewedBinaryFeatures <- function(mu, z, minNumReport=20, maxDiff=0.01) {
+getHighlySkewedBinaryFeatures <- function(mu, z, minNumReport=20, maxDiff=0.01, maxSubset=20000) {
   imbalanced <- rep(F, length(mu))
   includeFeatures <- rep(T, length(mu))
   n1s <- rep(NA, length(mu))
@@ -133,14 +144,18 @@ getHighlySkewedBinaryFeatures <- function(mu, z, minNumReport=20, maxDiff=0.01) 
   if (is.vector(z))
     z <- as.matrix(z)
   n <- nrow(z)
+  f <- min(maxSubset/n, 1)  # Factor for varProxy
   meanz <- colMeans(z)
   for (i in 1:(length(mu))) {
     minzi <- min(z[ , i])
     maxzi <- max(z[ , i])
     if (maxzi > minzi) {  # feature i is still binary after removal of samples
       n1s[i] <- sum(z[ , i] == maxzi)
-      varProxies[i] <- varProxy(n, n1s[i], (mu[i]-minzi)/(maxzi-minzi))
-      imbalanced[i] <- varProxies[i] > max(5/n, 0.001)
+      varProxies[i] <- varProxy(n, n1s[i]*f, (mu[i]-minzi)/(maxzi-minzi))
+      if (n>2000)
+        imbalanced[i] <- varProxies[i] > 0.000625 # 1/40**2
+      else
+        imbalanced[i] <- varProxies[i] > 2/n
     }
     else {
       if (minzi==0)

@@ -45,7 +45,7 @@ seTunedWeightOptimizer <- function(
 
 
 setInitialW <- function(wOptimizer, results) {
-  ParallelLogger::logInfo(glue('Setting initial w: sum={sum(results$w)}, sd={sd(results$w)}, n0- = {sum(results$w<=0)}'))
+  # ParallelLogger::logInfo(glue('Setting initial w: sum={sum(results$w)}, sd={sd(results$w)}, n0- = {sum(results$w<=0)}'))
   wOptimizer$w0 <- results$w
   return(wOptimizer)
 }
@@ -77,7 +77,7 @@ optimizeSEWeightsTuned <- function(wOptimizer, Z, mu)
   # Get initinal error
   rr <- colMeans(Z) - mu
   err <- sum(rr**2)
-  ParallelLogger::logInfo(glue('Initial err {err}'))
+  # ParallelLogger::logInfo(glue('Initial err {err}'))
 
   # Initialize optimizer
   tOptimizer <- seOptimizer(
@@ -133,8 +133,11 @@ optimizeSEWeightsTuned <- function(wOptimizer, Z, mu)
 
   r <- fOptimizer$optimize(fOptimizer, Z, mu)
   gc()
-  totalIter <- totalIter + nrow(r$log)
+  l <- r$log
+  i <- nrow(l)
+  totalIter <- totalIter + i
   r$totalIter <- totalIter
+  ParallelLogger::logInfo(glue('Finished at {totalIter}\terr {r$err}\tkl {l[i,2]}\tmax {l[i,3]} status={r$status}'))
   return(r)
 }
 
@@ -203,7 +206,7 @@ optimizeSEWeights <- function(wOptimizer, Z, mu) {
   l[1, 1] <- err
   l[1, 2] <- kl
   l[1, 3] <- max(abs(rr))
-  ParallelLogger::logInfo(glue('Starting with \terr {err}\tkl {kl}\tmax {l[1,3]}'))
+  # ParallelLogger::logInfo(glue('Starting with \terr {err}\tkl {kl}\tmax {l[1,3]}'))
   g <- Z %*% rr  # * 2  #
   for (i in 2:maxIter) {
 
@@ -224,7 +227,7 @@ optimizeSEWeights <- function(wOptimizer, Z, mu) {
       l[i,2] <- kl
     }
     if (is.na(err)) {
-      ParallelLogger::logInfo('NA objective')
+      ParallelLogger::logWarn('NA objective')
       return(list(w_hat=w*n, err=Inf, log=l, status = 'NA-objective'))
     }
     if ((err < wOptimizer$absTol) || (maxAbsErr < wOptimizer$absMaxUnivariateTol))
@@ -246,7 +249,6 @@ optimizeSEWeights <- function(wOptimizer, Z, mu) {
   else
     status = 'Not-converged'
   r <- list(w_hat=n*w, err=err, log=l, status=status, maxAbsErr=maxAbsErr)
-  ParallelLogger::logInfo(glue('Finished at {i}\terr {err}\tkl {l[i,2]}\tmax {l[i,3]} status={status}'))
   return(r)
 }
 

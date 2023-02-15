@@ -125,7 +125,8 @@ estimateExternalPerformanceFromStatistics <- function(
   preD <- preDiagnostics(
     internalData$z,
     externalStats,
-    maxDiff = externalEstimatorSettings$maxDiff
+    maxDiff = externalEstimatorSettings$maxDiff,
+    maxSubset = externalEstimatorSettings$nMaxReweight
     )
   result$preDiagnosis <- preD
   if (preD$status != 'Success') {

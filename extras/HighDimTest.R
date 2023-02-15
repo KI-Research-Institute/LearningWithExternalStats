@@ -12,23 +12,23 @@ source('./offset-test.R')
 
 # Parameters
 nTest <- 10
-loadCached = F
+loadCached = T
 
 testParams <- list(
   binary = T, # type of covariates
-  p=2,
-  n=2000,
-  outcomeOffset = -log(2),
+  p=100,  # 2
+  n=2000,  # 2000
+  outcomeOffset = -log(2), #
   sigma_B_Y_X_factor = 3,  # Testing smaller factor means less predictive power of variables ...
   sigma_B_Y_XA_factor = 3,  # Testing ...
   envOffset = 1,  # Testing ...
   loadCached = loadCached,  # load or train from scratch
   trainer = wglmnet()  # wXGBoost()
 )
-# modelParams[c('p', 'n', 'outcomeOffset')] <- c(2, 3e-5, -log(250))
+testParams[c('p', 'n', 'outcomeOffset')] <- c(500, 3e5, -log(250))
 
 modelName <- getModelName(testParams)
-outputDir <- file.path('D:/projects/robustness/bench01', modelName)
+outputDir <- file.path('D:/projects/robustness/bench02', modelName)
 dataDir <- file.path('D:/projects/robustness/evaluationData', modelName)
 
 esti  <- createExternalEstimatorSettings(

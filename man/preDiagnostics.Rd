@@ -4,7 +4,7 @@
 \alias{preDiagnostics}
 \title{Pre re-weighting diagnostics}
 \usage{
-preDiagnostics(z, mu, maxDiff, npMinRatio = 4)
+preDiagnostics(z, mu, maxDiff, npMinRatio = 4, maxSubset = 20000)
 }
 \arguments{
 \item{z}{a data frame of transformed feature-outcome pairs}
@@ -14,6 +14,8 @@ preDiagnostics(z, mu, maxDiff, npMinRatio = 4)
 \item{maxDiff}{maximum difference from which to check max prop}
 
 \item{npMinRatio}{minimum ratio between number of features and number of examples}
+
+\item{maxSubset=20000}{}
 }
 \value{
 a named list with the following fields:
@@ -21,4 +23,13 @@ a named list with the following fields:
 }
 \description{
 compare external expectations and internal means before reweighting
+
+The following tests are made:
+\enumerate{
+\item z and mu have the same set of variables
+\item z and mu do not contain NA entries
+\item skew in binary features
+}
+
+Additionally, internal samples are removed when ...
 }
