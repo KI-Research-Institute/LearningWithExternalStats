@@ -33,3 +33,7 @@ The algorithm returns a 'Success' status if the maximum weighted SMD is smaller 
 
 ### Estimation
 Finally, performance measures are computed using the weighted versions.
+
+### Citation
+[Estimating Model Performance on External Samples from Their Limited Statistical Characteristics](https://proceedings.mlr.press/v174/el-hay22a)<br/>
+Tal El-Hay and Chen Yanover. <em>Proceedings of the Conference on Health, Inference, and Learning, PMLR</em>, 174:48-62, 2022.
