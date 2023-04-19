@@ -11,11 +11,9 @@ testSimpleSimulation <- function(probsInt, probsExt, n, maxProp=100) {
   muExt <- colMeans(zExt)
   # cat('mu Ext', muExt, '\n')
 
-  r <- preDiagnostics(z, muExt, 100, verbose = T)
+  r <- preDiagnostics(z, muExt, 100)
 
   cat('n represented features:', length(r$representedFeatures), '\n')
-  cat('Unary features:', r$unaryFeatures, '\n')
-  cat('Incompatible unary varialbe =',  r$incompatableUnaryVariable, '\n')
   cat('Highly skewed binary:', r$highlySkewedBinary, '\n')
   cat('n =', sum(r$zidx), '\n')
   cat('Status = ', r$status, '\n\n')

@@ -67,7 +67,6 @@ preDiagnostics <- function(z, mu, maxDiff, npMinRatio = 4, maxSubset=20000) {
 
   if ( length(outOfRange) > 0 || unaryResults$incompatableUnaryVariable || fewSamples
        || length(binaryResults$highlySkewedBinary)>0
-       # || length(unaryResults$unaryFeatures) > 0
   ) {
     status = 'Failure'
     ParallelLogger::logWarn(glue('Pre-evaluation diagnosis status = {status}'))
@@ -76,12 +75,10 @@ preDiagnostics <- function(z, mu, maxDiff, npMinRatio = 4, maxSubset=20000) {
     ParallelLogger::logInfo(glue('Pre-evaluation diagnosis status = {status}'))
   }
   return (list(
-    outOfRange = outOfRange,
+    outOfRange = outOfRange,  # External statistics is out of range of a numeric feature
     representedFeatures=representedFeatures,
     zidx = binaryResults$zidx,
-    unaryFeatures = unaryResults$unaryFeatures,
-    incompatableUnaryVariable = unaryResults$incompatableUnaryVariable,
-    highlySkewedBinary=binaryResults$highlySkewedBinary,
+    highlySkewedBinary=binaryResults$highlySkewedBinary,  # list
     status = status
   ))
 }
@@ -226,17 +223,22 @@ preCheckUnaryFeatures <- function(z, mu, results, maxUnaryDiff=0.01) {
     unaryFeatures = featureNames[unaryFeatures]))
 }
 
-
+#' Check overlap of variables names
+#'
+#' @param z a data-frame
+#' @param mu named vector
+#'
 checkVariableNamesOverlap <- function(z, mu) {
   zMinusMu <- !colnames(z) %in% names(mu)
   n <- sum(zMinusMu)
-  status <- 'Success'
+  result <- list(status = 'Success', missingInMu = T, missingIn =)
   if (n>0) {
     ParallelLogger::logWarn(glue('{n} variables are in z but not in mu'))
     missingVars <- colnames(z)[zMinusMu]
     for (i in 1:n)
       ParallelLogger::logWarn(glue('{missingVars[i]} is in z but not in mu'))
-    status <- 'Missing-in-mu'
+    result$missingInMu <- T
+    result$status <- 'Missing-in-mu'
   }
   muMinusZ <- !names(mu) %in% colnames(z)
   n <- sum(muMinusZ)
@@ -245,10 +247,11 @@ checkVariableNamesOverlap <- function(z, mu) {
     missingVars <- names(mu)[muMinusZ]
     for (i in 1:n)
       ParallelLogger::logWarn(glue('{missingVars[i]} is in mu but not in z'))
-    status <- 'Missing-in-z'
+    result$status <- 'Missing-in-z'
   }
-  muIntersection <- names(mu)[!muMinusZ]
-  if (length(muIntersection)<2)
-    ParallelLogger::logWarn(glue('z and mu have only {length(muIntersection)} overlapping variable names'))
-  return(list(muIntersection=muIntersection, status=status))
+  result$muIntersection <- names(mu)[!muMinusZ]
+  if (length(result$muIntersection)<2)
+    ParallelLogger::logWarn(
+      glue('z and mu have only {length(result$muIntersection$muIntersection)} overlapping variable names'))
+  return(result)
 }
