@@ -1,3 +1,5 @@
+rm(list=ls())
+
 library(glue)
 library(LearningWithExternalStats)
 

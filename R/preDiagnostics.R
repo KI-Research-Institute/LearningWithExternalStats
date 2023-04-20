@@ -51,10 +51,14 @@ preDiagnostics <- function(z, mu, maxDiff, npMinRatio = 4, maxSubset=20000) {
   if (structuredLog$highlySkewedBinary)
     structuredLog$status = 'Failure'
 
-  print(structuredLog)
-
   unaryResults <- preCheckUnaryFeatures(z, mu, binaryResults, maxUnaryDiff = maxDiff)
   includeFeatures <- unaryResults$includeFeatures
+  structuredLog$incompatableUnaryVariable <- unaryResults$incompatableUnaryVariable
+  structuredLog$incompatibleUnaryRepresentative <- unaryResults$incompatibleRepresentative
+  if (structuredLog$incompatableUnaryVariable)
+    structuredLog$status = 'Failure'
+
+  print(structuredLog)
 
   representedFeatures <- names(mu[includeFeatures])
   # Check range of variables with >1 values
@@ -76,8 +80,7 @@ preDiagnostics <- function(z, mu, maxDiff, npMinRatio = 4, maxSubset=20000) {
     ParallelLogger::logWarn(glue("Few samples n={sum(binaryResults$zidx)}, p={length(representedFeatures)}"))
   }
 
-  if ( length(outOfRange) > 0 || unaryResults$incompatableUnaryVariable || fewSamples
-       || structuredLog$status != 'Success'
+  if ( length(outOfRange) > 0  || fewSamples || structuredLog$status != 'Success'
   ) {
     status = 'Failure'
     ParallelLogger::logWarn(glue('Pre-evaluation diagnosis status = {status}'))
@@ -230,23 +233,31 @@ preCheckUnaryFeatures <- function(z, mu, results, maxUnaryDiff=0.01) {
   incompatableUnaryVariable <- F
   nUnary <-sum(unaryFeatures)
   if (nUnary>0) {
-    if (nUnary>1)
-      maxUnarySkew <- max(abs(colMeans(z[, unaryFeatures])-mu[unaryFeatures]))
-    else
-      maxUnarySkew <- mean(z[, unaryFeatures])-mu[unaryFeatures]
+    if (nUnary>1) {
+      unarySkew <- abs(colMeans(z[, unaryFeatures])-mu[unaryFeatures])
+      maxUnarySkew <- max(unarySkew)
+      representative <- names(mu)[unaryFeatures[which.max(unarySkew)]]
+    }
+    else {
+      maxUnarySkew <- abs(mean(z[, unaryFeatures])-mu[unaryFeatures])
+      representative <- names(mu)[unaryFeatures]
+    }
     if (maxUnarySkew > maxUnaryDiff) {
       ParallelLogger::logWarn('Incopatible unary variables:')
       incompatableUnaryVariable <- T
       for (f in (featureNames[unaryFeatures]))
         if (mean(z[ ,f]) != mu[f])
           ParallelLogger::logError(glue('unary {f}, internal={mean(z[ ,f])}, external={mu[f]}'))
-    }
+    } else
+      representative <- ''
     includeFeatures <- includeFeatures & !unaryFeatures
-  }
+  } else
+    representative <- ''
   return(list(
     includeFeatures=includeFeatures,
     incompatableUnaryVariable = incompatableUnaryVariable,
-    unaryFeatures = featureNames[unaryFeatures]))
+    unaryFeatures = featureNames[unaryFeatures],
+    incompatibleRepresentative = representative))
 }
 
 #' Check overlap of variables names
