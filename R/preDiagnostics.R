@@ -24,26 +24,35 @@ preDiagnostics <- function(z, mu, maxDiff, npMinRatio = 4, maxSubset=20000) {
   nInput <- nrow(z)
   pInput <- ncol(z)
 
-  varNameOverlap <- checkVariableNamesOverlap(z, mu)
-  if (varNameOverlap$status != 'Success') {
-    ParallelLogger::logError(glue('varNameOverlap status = {varNameOverlap$status}'))
-    return(varNameOverlap)
+  structuredLog <- checkVariableNamesOverlap(z, mu)
+  if (structuredLog$status != 'Success') {
+    ParallelLogger::logError(glue('variable name overlap status = {structuredLog$status}'))
+    return(list(structuredLog=structuredLog, status='Failure'))
   }
 
-  naInZ <- any(is.na(z))
-  if (naInZ) {
+  structuredLog$naInZ <- any(is.na(z))
+  if (structuredLog$naInZ) {
     ParallelLogger::logError("Data set has na entries, cannot reweight")
-    return(list(status='Failure'))  # Do we need this
+    structuredLog$status = 'Failure'
+    return(list(structuredLog=structuredLog, status='Failure'))
   }
   # remove features with Na entries in table1
-  naInMu <- is.na(mu)
-  if (any(naInMu)) {
+  structuredLog$naInMu <- any(is.na(mu))
+  if (structuredLog$naInMu) {
     ParallelLogger::logError("Expectation vector has na entries, cannot reweight")
-    return(list(status='Failure'))  # Do we need this
+    structuredLog$status = 'Failure'
+    return(list(structuredLog=structuredLog, status='Failure'))
   }
-  includeFeatures <- !naInMu
+
   # Regardless of Na status in mu, perform other tests
-  binaryResults <- preCheckBinaryFeatures(z, mu, includeFeatures, maxSubset = maxSubset)
+  binaryResults <- preCheckBinaryFeatures(z, mu, maxSubset = maxSubset)
+  structuredLog$highlySkewedBinary <- length(binaryResults$highlySkewedBinary)>0
+  structuredLog$highSkewRepresentative <- binaryResults$highSkewRepresentative
+  if (structuredLog$highlySkewedBinary)
+    structuredLog$status = 'Failure'
+
+  print(structuredLog)
+
   unaryResults <- preCheckUnaryFeatures(z, mu, binaryResults, maxUnaryDiff = maxDiff)
   includeFeatures <- unaryResults$includeFeatures
 
@@ -68,7 +77,7 @@ preDiagnostics <- function(z, mu, maxDiff, npMinRatio = 4, maxSubset=20000) {
   }
 
   if ( length(outOfRange) > 0 || unaryResults$incompatableUnaryVariable || fewSamples
-       || length(binaryResults$highlySkewedBinary)>0
+       || structuredLog$status != 'Success'
   ) {
     status = 'Failure'
     ParallelLogger::logWarn(glue('Pre-evaluation diagnosis status = {status}'))
@@ -81,15 +90,25 @@ preDiagnostics <- function(z, mu, maxDiff, npMinRatio = 4, maxSubset=20000) {
     representedFeatures=representedFeatures,
     zidx = binaryResults$zidx,
     highlySkewedBinary=binaryResults$highlySkewedBinary,  # list
-    status = status
+    status = status,
+    structuredLog = structuredLog
   ))
 }
 
-
-preCheckBinaryFeatures <- function(z, mu, includeFeatures, maxSubset=20000) {
+#' pre check binary features
+#'
+#' @param z data frame of features
+#' @param mu named vectors of statistics
+#' @param includeFeatures indicators
+#' @param maxSubset max number of samples in training subsets
+#'
+#' @return a list
+#'
+preCheckBinaryFeatures <- function(z, mu, maxSubset=20000) {
   n1 <- nrow(z)
   binaryFeatureIndicators <- apply(z, 2, function(c) {length(unique(c))==2})
-  binaryFeatureIndicators <- binaryFeatureIndicators & includeFeatures
+  includeFeatures <- rep(T, length(binaryFeatureIndicators))
+  names(includeFeatures) <- names(binaryFeatureIndicators)
   # Identify feature that has a single value in the external dataset and the corresponding sub-population in the
   # internal one
   binaryFeatures <- names(mu[binaryFeatureIndicators])
@@ -110,11 +129,13 @@ preCheckBinaryFeatures <- function(z, mu, includeFeatures, maxSubset=20000) {
   ParallelLogger::logInfo(glue('z has {length(binaryFeatures)} binary features'))
   highlySkewedBinary <- getHighlySkewedBinaryFeatures(
     mu[binaryFeatures], z[zidx, binaryFeatures], maxSubset = maxSubset)
-  includeFeatures[binaryFeatures] <- highlySkewedBinary$includeFeature
+  includeFeatures[binaryFeatures] <- highlySkewedBinary$includeFeatures
   return(list(
     includeFeatures=includeFeatures,
     zidx = zidx,
-    highlySkewedBinary=highlySkewedBinary$skewedNames))
+    highlySkewedBinary=highlySkewedBinary$skewedNames,
+    highSkewRepresentative=highlySkewedBinary$highSkewRepresentative
+  ))
 }
 
 
@@ -134,7 +155,10 @@ varProxy <- function(n, n1, muExt) {
 #'
 #' TODO better treatment cases in which binary values may not be 0 or 1. Transform to this form if needed
 #'
+#' @return a list
+#'
 getHighlySkewedBinaryFeatures <- function(mu, z, minNumReport=20, maxDiff=0.01, maxSubset=20000) {
+
   imbalanced <- rep(F, length(mu))
   includeFeatures <- rep(T, length(mu))
   n1s <- rep(NA, length(mu))
@@ -166,13 +190,7 @@ getHighlySkewedBinaryFeatures <- function(mu, z, minNumReport=20, maxDiff=0.01, 
     }
   }
   if (sum(imbalanced) > 0) {
-    if (F) {  # TODO Aggregated skewed features, consider this
-      reportDf <- data.frame(matrix(ncol=2, nrow=sum(imbalanced)))
-      rownames(reportDf) <- names(mu[imbalanced])
-      colnames(reportDf) <- c('Int', 'Ext')
-      reportDf[[1]] <- meanz[imbalanced]
-      reportDf[[2]] <- mu[imbalanced]
-    }
+    skewDescriptions <- rep('', length(imbalanced))
     for (i in which(imbalanced)) {
       f <- names(mu)[i]
       smu <- format(mu[i], digits=3)
@@ -185,14 +203,20 @@ getHighlySkewedBinaryFeatures <- function(mu, z, minNumReport=20, maxDiff=0.01, 
       }
       if (mu[i] < maxDiff)  { # in this case both mu and n1 are small
         includeFeatures[i] <- F
-        ParallelLogger::logInfo(glue('Removing nearly-unary feature {f}: n={n} n1{n1sStr} mean{meanStr} mu={smu}'))
+        skewDescriptions[i] <- glue('Nearly-unary {f}: n={n} n1{n1sStr} mean{meanStr} mu={smu}')
       }
       else
-        ParallelLogger::logWarn(glue('Skewed feature {f}: n={n} n1{n1sStr} mean{meanStr} mu={smu}'))
+        skewDescriptions[i] <- glue('Skewed {f}: n={n} n1{n1sStr} mean{meanStr} mu={smu}')
+      ParallelLogger::logWarn(skewDescriptions[i])
     }
+    varProxies[is.na(varProxies)] <- 0
+    highSkewRepresentative <- skewDescriptions[which.max(varProxies)]
   }
+  else
+    highSkewRepresentative <- ''
   skewedNames <- names(mu[imbalanced & includeFeatures])
-  return(list(skewedNames=skewedNames, includeFeatures=includeFeatures))
+  # Extract high skew representative
+  return(list(skewedNames=skewedNames, includeFeatures=includeFeatures, highSkewRepresentative=highSkewRepresentative))
 }
 
 

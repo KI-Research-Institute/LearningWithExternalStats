@@ -21,17 +21,18 @@ testSimpleSimulation <- function(probsInt, probsExt, n, maxProp=100) {
 }
 # TODO Test unary and binary variable check under different scenarios
 
-n <- 3e5
+n <- 1e4
 maxProp <- 100
 
 probsInt <- c(0.5, 0.2, 0.1, 0.8,   1, 0.001, rbeta(500, 1, 10))
 probsExt <- c(0.5, 0.3, 0,     1, 0.4, 0.2, rbeta(500, 1, 10))
-# r1 <- testSimpleSimulation(probsInt, probsExt, n, maxProp)
+r1 <- testSimpleSimulation(probsInt, probsExt, n, maxProp)
 
 probsInt <- c(0.5, 0.2, 0.1,  0.8,    1, 0.01)
 probsExt <- c(0.5, 0.3, 0,      1,    1, 0.2)
-# r2 <- testSimpleSimulation(probsInt, probsExt, n, maxProp)
-p <- 100
-probsInt <- c(0.5, 0.2, 0.1,  0.8,  0.9, 0.01, rbeta(p, 1, 10))
-probsExt <- c(0.5, 0.3, 0,      1,    1, 0.2, rbeta(p, 1, 10))
-r3 <- testSimpleSimulation(probsInt, probsExt, n, maxProp)
+r2 <- testSimpleSimulation(probsInt, probsExt, n, maxProp)
+
+#p <- 100
+#probsInt <- c(0.5, 0.2, 0.1,  0.8,  0.9, 0.01, rbeta(p, 1, 10))
+#probsExt <- c(0.5, 0.3, 0,      1,    1, 0.2, rbeta(p, 1, 10))
+#r3 <- testSimpleSimulation(probsInt, probsExt, n, maxProp)
