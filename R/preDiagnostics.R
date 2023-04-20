@@ -25,8 +25,10 @@ preDiagnostics <- function(z, mu, maxDiff, npMinRatio = 4, maxSubset=20000) {
   pInput <- ncol(z)
 
   varNameOverlap <- checkVariableNamesOverlap(z, mu)
-  if (varNameOverlap$status != 'Success')
-    return(list(status='Failure'))
+  if (varNameOverlap$status != 'Success') {
+    ParallelLogger::logError(glue('varNameOverlap status = {varNameOverlap$status}'))
+    return(varNameOverlap)
+  }
 
   naInZ <- any(is.na(z))
   if (naInZ) {
@@ -229,16 +231,17 @@ preCheckUnaryFeatures <- function(z, mu, results, maxUnaryDiff=0.01) {
 #' @param mu named vector
 #'
 checkVariableNamesOverlap <- function(z, mu) {
+
   zMinusMu <- !colnames(z) %in% names(mu)
   n <- sum(zMinusMu)
-  result <- list(status = 'Success', missingInMu = T, missingIn =)
+  result <- list(status = 'Success', missingInMu = F, missingInZ = F, nOverlapFeatures = NaN)
   if (n>0) {
     ParallelLogger::logWarn(glue('{n} variables are in z but not in mu'))
     missingVars <- colnames(z)[zMinusMu]
     for (i in 1:n)
       ParallelLogger::logWarn(glue('{missingVars[i]} is in z but not in mu'))
     result$missingInMu <- T
-    result$status <- 'Missing-in-mu'
+    result$status <- 'Failure'
   }
   muMinusZ <- !names(mu) %in% colnames(z)
   n <- sum(muMinusZ)
@@ -247,11 +250,19 @@ checkVariableNamesOverlap <- function(z, mu) {
     missingVars <- names(mu)[muMinusZ]
     for (i in 1:n)
       ParallelLogger::logWarn(glue('{missingVars[i]} is in mu but not in z'))
-    result$status <- 'Missing-in-z'
+    result$missingInZ <- T
+    result$status <- 'Failure'
   }
-  result$muIntersection <- names(mu)[!muMinusZ]
-  if (length(result$muIntersection)<2)
+  result$nOverlapFeatures <- sum(!muMinusZ)
+  if (result$nOverlapFeatures==1)
     ParallelLogger::logWarn(
-      glue('z and mu have only {length(result$muIntersection$muIntersection)} overlapping variable names'))
+      glue('z and mu have only one overlapping variable names'))
+  else {
+    if (result$nOverlapFeatures==0) {
+      ParallelLogger::logWarn(
+        glue('z and mu do not have overlapping variable names'))
+      result$status = 'Failure'
+    }
+  }
   return(result)
 }
