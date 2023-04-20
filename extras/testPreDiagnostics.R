@@ -17,18 +17,19 @@ testSimpleSimulation <- function(probsInt, probsExt, n) {
   cat('Highly skewed binary:', r$highlySkewedBinary, '\n')
   cat('n =', sum(r$zidx), '\n')
   cat('Status = ', r$status, '\n\n')
+  print(data.frame(value=unlist(r$structuredLog)))  # TODO consider framing within package
   return(r)
 }
 # TODO Test unary and binary variable check under different scenarios
 
 n <- 1e4
 
-if (F) {
+if (T) {
   probsInt <- c(0.5, 0.2, 0.1, 0.8, 0.9, 0.001, rbeta(500, 1, 10))
   probsExt <- c(0.5, 0.3, 0,     1, 0.4, 0.2, rbeta(500, 1, 10))
   r1 <- testSimpleSimulation(probsInt, probsExt, n)
 }
-if (F) {
+if (T) {
   probsInt <- c(0.5, 0.2, 0.1,  0.8,    1, 0.01)
   probsExt <- c(0.5, 0.3, 0,      1,    1, 0.2)
   r2 <- testSimpleSimulation(probsInt, probsExt, n)

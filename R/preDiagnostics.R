@@ -58,8 +58,6 @@ preDiagnostics <- function(z, mu, maxDiff, npMinRatio = 4, maxSubset=20000) {
   if (structuredLog$incompatableUnaryVariable)
     structuredLog$status = 'Failure'
 
-  print(structuredLog)
-
   representedFeatures <- names(mu[includeFeatures])
   # Check range of variables with >1 values
   numericFeatureIndicators <- apply(z, 2, function(c) {length(unique(c))>1})
@@ -69,31 +67,36 @@ preDiagnostics <- function(z, mu, maxDiff, npMinRatio = 4, maxSubset=20000) {
   inRangeTol <- maxDiff  # TODO should we use a different param?
   inRange <- (muR >= apply(zR, 2, min)-maxDiff) & (muR <= apply(zR, 2, max)+maxDiff)
   outOfRange <- names(muR)[!inRange]
-  if (length(outOfRange) > 0) {
+  structuredLog$outOfRange = length(outOfRange) > 0
+  if (structuredLog$outOfRange) {
     ParallelLogger::logError('Out of range variables:')
+    f <- outOfRange[1]
+    structuredLog$outOfRangeRepresentative <- glue('{f}, mu={muR[f]}, min={min(zR[,f])}, max={max(zR[ ,f])}')
     for (f in outOfRange)
       ParallelLogger::logWarn(glue('{f}, mu={muR[f]}, min={min(zR[,f])}, max={max(zR[ ,f])}'))
-  }
+  } else
+    structuredLog$outOfRangeRepresentative <- ''
+
   # few samples
   fewSamples = sum(binaryResults$zidx)/length(representedFeatures) < npMinRatio
   if (fewSamples) {
-    ParallelLogger::logWarn(glue("Few samples n={sum(binaryResults$zidx)}, p={length(representedFeatures)}"))
-  }
+    ParallelLogger::logWarn(structuredLog$fewSamples)
+    structuredLog$fewSamples <- glue("Few samples n={sum(binaryResults$zidx)}, p={length(representedFeatures)}")
+    structuredLog$status = 'Failure'
+  } else
+    structuredLog$fewSamples <- ''
 
-  if ( length(outOfRange) > 0  || fewSamples || structuredLog$status != 'Success'
-  ) {
-    status = 'Failure'
-    ParallelLogger::logWarn(glue('Pre-evaluation diagnosis status = {status}'))
-  } else {
-    status = 'Success'
-    ParallelLogger::logInfo(glue('Pre-evaluation diagnosis status = {status}'))
-  }
+  if ( structuredLog$status != 'Success')
+    ParallelLogger::logWarn(glue('Pre-evaluation diagnosis status = {structuredLog$status}'))
+  else
+    ParallelLogger::logInfo(glue('Pre-evaluation diagnosis status = {structuredLog$status}'))
+
   return (list(
     outOfRange = outOfRange,  # External statistics is out of range of a numeric feature
     representedFeatures=representedFeatures,
     zidx = binaryResults$zidx,
     highlySkewedBinary=binaryResults$highlySkewedBinary,  # list
-    status = status,
+    status = structuredLog$status,  # For compatibility and ease of access
     structuredLog = structuredLog
   ))
 }
