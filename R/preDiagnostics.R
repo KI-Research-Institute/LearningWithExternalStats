@@ -233,15 +233,20 @@ preCheckUnaryFeatures <- function(z, mu, results, maxUnaryDiff=0.01) {
   incompatableUnaryVariable <- F
   nUnary <-sum(unaryFeatures)
   if (nUnary>0) {
+    meanUnaryMu <- mu[unaryFeatures]
     if (nUnary>1) {
-      unarySkew <- abs(colMeans(z[, unaryFeatures])-mu[unaryFeatures])
+      meanUnaryZ <- colMeans(z[, unaryFeatures])
+      unarySkew <- abs(meanUnaryZ-meanUnaryMu)
       maxUnarySkew <- max(unarySkew)
-      representative <- names(mu)[unaryFeatures[which.max(unarySkew)]]
+      f <- featureNames[unaryFeatures][which.max(unarySkew)]
+      representative <- glue('{f}: mean z={meanUnaryZ[f]}, mu={meanUnaryMu[f]}')
     }
     else {
-      maxUnarySkew <- abs(mean(z[, unaryFeatures])-mu[unaryFeatures])
-      representative <- names(mu)[unaryFeatures]
+      meanUnaryZ <- mean(z[, unaryFeatures])
+      maxUnarySkew <- abs(meanUnaryZ-meanUnaryMu)
+      representative <- glue('{names(mu)[unaryFeatures]}: mean z={meanUnaryZ}, mu={meanUnaryMu}')
     }
+    cat('Max unary skew', maxUnarySkew, 'max diff', maxUnaryDiff, '\n')
     if (maxUnarySkew > maxUnaryDiff) {
       ParallelLogger::logWarn('Incopatible unary variables:')
       incompatableUnaryVariable <- T
