@@ -1,3 +1,17 @@
+#' Get field names of structured pre-diagnostic object
+#'
+#' @return a character vector of field names
+#'
+#' @export
+getPreDiagnosticsFieldNames <- function() {
+  fields <- c(
+    "status", "missingInMu", "missingInZ", "nOverlapFeatures", "naInZ", "naInMu",
+    "highlySkewedBinary", "highSkewRepresentative", "incompatableUnaryVariable", "incompatibleUnaryRepresentative",
+    "outOfRange", "outOfRangeRepresentative", "fewSamples", "fewSamplesDescription"
+  )
+  return(fields)
+}
+
 
 #' Pre re-weighting diagnostics
 #'
@@ -23,11 +37,7 @@
 preDiagnostics <- function(z, mu, maxDiff, npMinRatio = 4, maxSubset=20000) {
 
   # Init structured log
-  fields <- c(
-  "status", "missingInMu", "missingInZ", "nOverlapFeatures", "naInZ", "naInMu",
-  "highlySkewedBinary", "highSkewRepresentative", "incompatableUnaryVariable", "incompatibleUnaryRepresentative",
-  "outOfRange", "outOfRangeRepresentative", "fewSamples", "fewSamplesDescription"
-  )
+  fields <- getPreDiagnosticsFieldNames()
   structuredLog = data.frame(value=rep(NA, length(fields)), row.names = fields)
 
   nInput <- nrow(z)

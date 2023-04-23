@@ -23,7 +23,7 @@ muExt <- colMeans(dTransformedExt)
 externalEstimatorSettings <- createExternalEstimatorSettings(
   reweightAlgorithm = seTunedWeightOptimizer(), # cvxWeightOptimizer(),
   nMaxReweight = 10000,
-  nRepetitions = 3,
+  nRepetitions = 10,
   maxCores = 3
 )
 

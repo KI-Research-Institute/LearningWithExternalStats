@@ -447,12 +447,12 @@ summarizeBootstrap <- function(b) {
   nboot <- nrow(b)
   s <- list()
   for (measure in colnames(b)) {
-    r <- b[,measure]  # TODO learn how to extract vectors from matrices
+    r <- b[,measure]
     if (min(r)>-1) {
 
       resultsQuantiles <- quantile(r, probs = probs, na.rm = TRUE)
-      s[[paste('prc lower', measure)]] = resultsQuantiles[[1]]
-      s[[paste('prc upper', measure)]] = resultsQuantiles[[2]]
+      # s[[paste('NP lower', measure)]] = resultsQuantiles[[1]]
+      # s[[paste('NP upper', measure)]] = resultsQuantiles[[2]]
 
       # Standard normal interval assuming a zero bias
       # TODO correct for biases in case there is a complete sample
@@ -462,11 +462,11 @@ summarizeBootstrap <- function(b) {
       se <- sd(r1)
 
       s[[paste('95% lower', measure)]] = exp(m-1.96*se)-1
-      s[[paste('Median', measure)]] = median(r)
+      # s[[paste('Median', measure)]] = median(r)
       s[[paste('95% upper', measure)]] = exp(m+1.96*se)-1
 
-      s[[paste(measure, 'mean')]] = mean(r, na.rm = TRUE)
-      s[[paste(measure, 'sd')]] = sd(r, na.rm = TRUE)
+      # s[[paste(measure, 'mean')]] = mean(r, na.rm = TRUE)
+      # s[[paste(measure, 'sd')]] = sd(r, na.rm = TRUE)
     }
   }
   s[['n repetitions']] = nboot - sum(is.na(r))
@@ -504,7 +504,7 @@ getPerformanceMeasures <- function(y, p, w=NULL) {
     return(NULL)
   }
   return(list('AUROC' = pAuc,
-              'Log likelyhood' = pLogLike,
+              # 'Log likelyhood' = pLogLike,
               'Brier score' = pBrier,
               'Global calibration mean prediction' = pMeanPredictionRisk,
               'Global calibration observed risk' = pMeanObservedRisk
