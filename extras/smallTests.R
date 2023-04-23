@@ -1,3 +1,5 @@
+rm(list = ls())
+
 library(LearningWithExternalStats)
 library(glue)
 library(pROC)
@@ -21,13 +23,13 @@ muExt <- colMeans(dTransformedExt)
 externalEstimatorSettings <- createExternalEstimatorSettings(
   reweightAlgorithm = seTunedWeightOptimizer(), # cvxWeightOptimizer(),
   nMaxReweight = 10000,
-  nRepetitions = 1,
-  maxCores = 1
+  nRepetitions = 3,
+  maxCores = 3
 )
 
 internalData <- list(z=dTransformedInt, p = pInternal, y = d$internalTest[['Y']])
 
-estimatedLRResults <- estimateExternalPerformanceFromStatistics(
+estimatedLRResults1 <- estimateExternalPerformanceFromStatistics(
   internalData = internalData,
   externalStats = muExt,
   externalEstimatorSettings = externalEstimatorSettings
@@ -40,9 +42,16 @@ showResults <- c(
   'Brier score',
   'Global calibration mean prediction',
   'Global calibration observed risk')
-estimationLRView <- estimatedLRResults$estimation[showResults, , drop = F]
-estimationLRView[, 'value'] <- apply(estimationLRView, 1, function(x) {sprintf('%.3g', x)})
-print(estimationLRView)
+estimationLRView <- estimatedLRResults1$estimation[showResults, , drop = F]
+
+if (!is.null(estimationLRView)) {
+  estimationLRView[, 'value'] <- apply(estimationLRView, 1, function(x) {sprintf('%.3g', x)})
+  print(estimationLRView)
+} else
+{
+  cat('Empty estimation results\n')
+}
+
 
 
 xExternal <- sapply(d$externalTest[xFeatures], as.numeric)
@@ -57,19 +66,19 @@ excludeVars <- c('X3_Table1T_times_y1', 'X3_Table1T_times_y0')
 reducedMu <- muExt[!names(muExt) %in% excludeVars]
 
 cat('Reduced mu length =', length(reducedMu), '\n')
-estimatedLRResults <- estimateExternalPerformanceFromStatistics(
+estimatedLRResults2 <- estimateExternalPerformanceFromStatistics(
   internalData = internalData,
   externalStats = reducedMu,
   externalEstimatorSettings = externalEstimatorSettings
 )
-cat(estimatedLRResults$estimation['AUROC', 'value'], '\n')
+cat(estimatedLRResults2$estimation['AUROC', 'value'], '\n')
 
 
 internalData$z <- internalData$z[, !colnames(internalData$z) %in% excludeVars]
 cat('Reduced z width =', ncol(internalData$z), '\n')
-estimatedLRResults <- estimateExternalPerformanceFromStatistics(
+estimatedLRResults3 <- estimateExternalPerformanceFromStatistics(
   internalData = internalData,
   externalStats = muExt,
   externalEstimatorSettings = externalEstimatorSettings
 )
-cat(estimatedLRResults$estimation['AUROC', 'value'], '\n')
+cat(estimatedLRResults3$estimation['AUROC', 'value'], '\n')
