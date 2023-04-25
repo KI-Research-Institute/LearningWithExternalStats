@@ -110,8 +110,13 @@ getEstimationFieldNames <- function() {
 #'   \item{\code{status}:} {execution status, either \code{'Success'} or \code{'Failure'}}
 #'   \item{\code{preDiagnosis}:} {Pre-diagnosis results object}
 #'   \item{\code{estimationTime}:} {execution time}
+#'   \item{\code{weightingResults}:} {a data-frame with a single column \code{'value'} and row-names that determine
+#'   weighting status, specifically: \code{Opt err} is the optimization error, \code{n iter}, number of iterations,
+#'   \code{n outcome} number of outcomes in bootstrap samples; and \code{Max Weighted SMD} is the maximum over
+#'   features of standardized mean difference between internal weighted averages and external statistics.
+#'   This data frame includes also bootstrap statistics for each of these elements.}
 #'   \item{\code{estimation}:} {a data-frame with a single column \code{'value'} and row-names that determine various
-#'   estimators.}
+#'   performance metrics.}
 #'   }
 #'
 #' @export
