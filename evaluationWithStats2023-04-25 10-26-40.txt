@@ -1,0 +1,10 @@
+2023-04-25 10:26:40	[Main thread]	WARN	LearningWithExternalStats	checkVariableNamesOverlap	2 variables are in z but not in mu
+2023-04-25 10:26:40	[Main thread]	WARN	LearningWithExternalStats	checkVariableNamesOverlap	X3_Table1T_times_y1 is in z but not in mu
+2023-04-25 10:26:40	[Main thread]	WARN	LearningWithExternalStats	checkVariableNamesOverlap	X3_Table1T_times_y0 is in z but not in mu
+2023-04-25 10:26:40	[Main thread]	ERROR	LearningWithExternalStats	preDiagnostics	variable name overlap status = Failure
+2023-04-25 10:26:40	[Main thread]	ERROR	LearningWithExternalStats	estimateExternalPerformanceFromStatistics	Pre-balancing diagnosis status = Failure
+2023-04-25 10:26:40	[Main thread]	WARN	LearningWithExternalStats	checkVariableNamesOverlap	2 variables are in mu but not in z
+2023-04-25 10:26:40	[Main thread]	WARN	LearningWithExternalStats	checkVariableNamesOverlap	X3_Table1T_times_y1 is in mu but not in z
+2023-04-25 10:26:40	[Main thread]	WARN	LearningWithExternalStats	checkVariableNamesOverlap	X3_Table1T_times_y0 is in mu but not in z
+2023-04-25 10:26:40	[Main thread]	ERROR	LearningWithExternalStats	preDiagnostics	variable name overlap status = Failure
+2023-04-25 10:26:40	[Main thread]	ERROR	LearningWithExternalStats	estimateExternalPerformanceFromStatistics	Pre-balancing diagnosis status = Failure

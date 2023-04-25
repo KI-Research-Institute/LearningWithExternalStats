@@ -2,7 +2,7 @@
 % Please edit documentation in R/postDiagnostics.R
 \name{postDiagnostics}
 \alias{postDiagnostics}
-\title{Post reweighing diagnostics}
+\title{Post weighting diagnostics}
 \usage{
 postDiagnostics(w, z, mu)
 }

@@ -25,6 +25,9 @@ getHighlySkewedBinaryFeatures(
 
 TODO better treatment cases in which binary values may not be 0 or 1. Transform to this form if needed}
 }
+\value{
+a list
+}
 \description{
 Get highly skewed binary features
 }

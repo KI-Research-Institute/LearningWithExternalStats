@@ -35,15 +35,7 @@ estimatedLRResults1 <- estimateExternalPerformanceFromStatistics(
   externalEstimatorSettings = externalEstimatorSettings
 )
 
-showResults <- c(
-  'n',
-  'n outcome',
-  'AUROC',
-  'Brier score',
-  'Global calibration mean prediction',
-  'Global calibration observed risk')
-estimationLRView <- estimatedLRResults1$estimation[showResults, , drop = F]
-
+estimationLRView <- estimatedLRResults1$estimation
 if (!is.null(estimationLRView)) {
   estimationLRView[, 'value'] <- apply(estimationLRView, 1, function(x) {sprintf('%.3g', x)})
   print(estimationLRView)

@@ -63,6 +63,28 @@ createExternalEstimatorSettings <- function(
 }
 
 
+
+#' Get estimation field names
+#'
+#' @return a character vector of field names
+#'
+#' @export
+getEstimationFieldNames <- function() {
+  coreFields <- c(
+    'AUROC',
+    'Brier score',
+    'Global calibration mean prediction',
+    'Global calibration observed risk'
+  )
+  fields <- coreFields
+  for (f in fields) {
+    fields <- c(fields, glue('95% lower {f}'), glue('Median    {f}'), glue('95% upper {f}'), glue('{f} sd'))
+  }
+  return(fields)
+}
+
+
+
 #' Estimate external model performance from statistics and internal
 #' test data
 #'
@@ -105,6 +127,7 @@ estimateExternalPerformanceFromStatistics <- function(
     status = NULL,
     preDiagnosis = NULL,
     estimationTime = NULL,
+    weightingResults = NULL,
     estimation = NULL
   )
   class(result) <- 'estimatedExternalPerformanceFromStatistics'
@@ -178,12 +201,19 @@ estimateExternalPerformanceFromStatistics <- function(
     return(result)
   }
   s <- summarizeBootstrap(resultsMatrix)
+  allResults <- unlist(c(list(as.list(meanResults), as.list(s))))
+  # Add weighting results
+  fieldNames <- intersect((names(allResults)), getWeightingResultsFieldNames())
+  if (length(fieldNames)>0)
+    result$weightingResults <- data.frame(value=allResults[fieldNames])
 
   # Process post diagnostic information
   # TODO add a post diagnostic that measures 'effective sample size'
   result$status <- checkWsmdStatus(resultsMatrix, meanResults, externalEstimatorSettings)
-  if (result$status == 'Success')
-    result$estimation = data.frame(value=unlist(c(list(as.list(meanResults), as.list(s)))))
+  if (result$status == 'Success') {
+    fieldNames <- intersect((names(allResults)), getEstimationFieldNames())
+    result$estimation = data.frame(value=allResults[fieldNames])
+  }
   return(result)
 }
 
@@ -462,11 +492,11 @@ summarizeBootstrap <- function(b) {
       se <- sd(r1)
 
       s[[paste('95% lower', measure)]] = exp(m-1.96*se)-1
-      # s[[paste('Median', measure)]] = median(r)
+      s[[paste('Median', measure)]] = median(r)
       s[[paste('95% upper', measure)]] = exp(m+1.96*se)-1
 
       # s[[paste(measure, 'mean')]] = mean(r, na.rm = TRUE)
-      # s[[paste(measure, 'sd')]] = sd(r, na.rm = TRUE)
+      s[[paste(measure, 'sd')]] = sd(r, na.rm = TRUE)
     }
   }
   s[['n repetitions']] = nboot - sum(is.na(r))
