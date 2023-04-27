@@ -5,7 +5,7 @@
 #' @export
 getPreDiagnosticsFieldNames <- function() {
   fields <- c(
-    "status", "missingInMu", "missingInZ", "nOverlapFeatures", "naInZ", "naInMu",
+    "preDiagnosisStatus", "missingInMu", "missingInZ", "nOverlapFeatures", "naInZ", "naInMu",
     "highlySkewedBinary", "highSkewRepresentative", "incompatableUnaryVariable", "incompatibleUnaryRepresentative",
     "outOfRange", "outOfRangeRepresentative", "fewSamples", "fewSamplesDescription"
   )
@@ -31,7 +31,34 @@ getPreDiagnosticsFieldNames <- function() {
 #' @param maxSubset=20000
 #'
 #' @return a named list with the following fields:
-#' ...
+#' \itemize{
+#'   \item{outOfRange}{list of external statistics is out of range of a numeric feature}
+#'   \item{representedFeatures}{names of features }
+#'   \item{zidx}{indices of samples that should be used in reweighting}
+#'   \item{highlySkewedBinary}{list of highly skewed variables}
+#'   \item{status}{a string that determines}
+#'   \item{structuredLog}{A data frame with indicators of prediagnosis results and descriptions, see below}
+#' }
+#'
+#' Structured log is a data-frame with a single value column and the following row names:
+#' \describe{
+#' \item{preDiagnosisStatus}{over all status of diagnostics}
+#' \item{missingInMu}{there are variables in the internal data matrix that are missing in the external statistics}
+#' \item{missingInZ}{variable in the external statistics are missing in the internal data}
+#' \item{nOverlapFeatures}{number of overlapping features}
+#' \item{naInZ}{NA values in the internal data}
+#' \item{naInMu}{NA values in the statistics vector}
+#' \item{highlySkewedBinary}{highly skewed binary variables, generally indicating a few sample in the internal
+#'  dataset but a high proportion of them in the external ones}
+#' \item{highSkewRepresentative'}{an example for a highly skewed variable}
+#' \item{incompatableUnaryVariable'}{value of an internal unary variable is different than the external one more than
+#' a threshold}
+#' \item{incompatibleUnaryRepresentative'}{example for incompatible unary variable}
+#' \item{outOfRange}{externa statistic is out of range}
+#' \item{outOfRangeRepresentative}{example}
+#' \item{fewSamples}{few sample relative to number of }
+#' \item{fewSamplesDescription}{elaboration on number of samples and dimension}
+#' }
 #'
 #' @export
 preDiagnostics <- function(z, mu, maxDiff, npMinRatio = 4, maxSubset=20000) {
@@ -45,7 +72,7 @@ preDiagnostics <- function(z, mu, maxDiff, npMinRatio = 4, maxSubset=20000) {
 
   overlapLog <- checkVariableNamesOverlap(z, mu)
   structuredLog[names(overlapLog), 'value'] = unlist(overlapLog)
-  status <- overlapLog$status
+  status <- overlapLog$preDiagnosisStatus
 
   if (status != 'Success') {
     ParallelLogger::logError(glue('variable name overlap status = {status}'))
@@ -56,6 +83,7 @@ preDiagnostics <- function(z, mu, maxDiff, npMinRatio = 4, maxSubset=20000) {
   if (structuredLog['naInZ', 'value']) {
     ParallelLogger::logError("Data set has na entries, cannot reweight")
     status <- 'Failure'
+    structuredLog$preDiagnosisStatus <- 'Failure'
     return(list(structuredLog=structuredLog, status='Failure'))
   }
   # remove features with Na entries in table1
@@ -63,6 +91,7 @@ preDiagnostics <- function(z, mu, maxDiff, npMinRatio = 4, maxSubset=20000) {
   if (structuredLog['naInMu', 'value']) {
     ParallelLogger::logError("Expectation vector has na entries, cannot reweight")
     status <- 'Failure'
+    structuredLog$preDiagnosisStatus <- 'Failure'
     return(list(structuredLog=structuredLog, status='Failure'))
   }
 
@@ -112,7 +141,7 @@ preDiagnostics <- function(z, mu, maxDiff, npMinRatio = 4, maxSubset=20000) {
     ParallelLogger::logWarn(glue('Pre-evaluation diagnosis status = {status}'))
   else
     ParallelLogger::logInfo(glue('Pre-evaluation diagnosis status = {status}'))
-  structuredLog['status', 'value'] <- status
+  structuredLog['preDiagnosisStatus', 'value'] <- status
 
   return (list(
     outOfRange = outOfRange,  # External statistics is out of range of a numeric feature
@@ -300,14 +329,14 @@ checkVariableNamesOverlap <- function(z, mu) {
 
   zMinusMu <- !colnames(z) %in% names(mu)
   n <- sum(zMinusMu)
-  result <- list(status = 'Success', missingInMu = F, missingInZ = F, nOverlapFeatures = NaN)
+  result <- list(preDiagnosisStatus = 'Success', missingInMu = F, missingInZ = F, nOverlapFeatures = NaN)
   if (n>0) {
     ParallelLogger::logWarn(glue('{n} variables are in z but not in mu'))
     missingVars <- colnames(z)[zMinusMu]
     for (i in 1:n)
       ParallelLogger::logWarn(glue('{missingVars[i]} is in z but not in mu'))
     result$missingInMu <- T
-    result$status <- 'Failure'
+    result$preDiagnosisStatus <- 'Failure'
   }
   muMinusZ <- !names(mu) %in% colnames(z)
   n <- sum(muMinusZ)
@@ -317,7 +346,7 @@ checkVariableNamesOverlap <- function(z, mu) {
     for (i in 1:n)
       ParallelLogger::logWarn(glue('{missingVars[i]} is in mu but not in z'))
     result$missingInZ <- T
-    result$status <- 'Failure'
+    result$preDiagnosisStatus <- 'Failure'
   }
   result$nOverlapFeatures <- sum(!muMinusZ)
   if (result$nOverlapFeatures==1)
@@ -327,7 +356,7 @@ checkVariableNamesOverlap <- function(z, mu) {
     if (result$nOverlapFeatures==0) {
       ParallelLogger::logWarn(
         glue('z and mu do not have overlapping variable names'))
-      result$status = 'Failure'
+      result$preDiagnosisStatus = 'Failure'
     }
   }
   return(result)

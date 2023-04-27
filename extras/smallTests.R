@@ -45,14 +45,23 @@ if (!is.null(estimationLRView)) {
 }
 
 
+fields <- c(getPreDiagnosticsFieldNames(), getWeightingResultsFieldNames(), getEstimationFieldNames(),
+            'Internal AUC', 'External AUC')
+summary <- data.frame(row.names = fields)
 
+expName <- 'Exp.1'
 xExternal <- sapply(d$externalTest[xFeatures], as.numeric)
 pExternal <- predict(model1, xExternal, type = "response", s = "lambda.1se")[,1]
 extAuc <- auc(roc(d$externalTest[['Y']], pExternal, quiet = TRUE, direction='<'))
 cat(glue('\nExternal AUC = {format(extAuc, digits=3)}'), '\n')
 
+summary['External AUC', expName] <- extAuc
+summary['Internal AUC', expName] <- internalAUC
+summary[rownames(estimatedLRResults1$results), expName] <- estimatedLRResults1$results
+
 
 # Test dropping a feature
+expName <- 'Exp.2'
 cat('mu length =', length(muExt), '\n')
 excludeVars <- c('X3_Table1T_times_y1', 'X3_Table1T_times_y0')
 reducedMu <- muExt[!names(muExt) %in% excludeVars]
@@ -64,8 +73,10 @@ estimatedLRResults2 <- estimateExternalPerformanceFromStatistics(
   externalEstimatorSettings = externalEstimatorSettings
 )
 cat(estimatedLRResults2$estimation['AUROC', 'value'], '\n')
+summary[rownames(estimatedLRResults2$results), expName] <- estimatedLRResults2$results
 
 
+expName <- 'Exp.3'
 internalData$z <- internalData$z[, !colnames(internalData$z) %in% excludeVars]
 cat('Reduced z width =', ncol(internalData$z), '\n')
 estimatedLRResults3 <- estimateExternalPerformanceFromStatistics(
@@ -74,3 +85,4 @@ estimatedLRResults3 <- estimateExternalPerformanceFromStatistics(
   externalEstimatorSettings = externalEstimatorSettings
 )
 cat(estimatedLRResults3$estimation['AUROC', 'value'], '\n')
+summary[rownames(estimatedLRResults3$results), expName] <- estimatedLRResults3$results

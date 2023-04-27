@@ -133,7 +133,8 @@ estimateExternalPerformanceFromStatistics <- function(
     preDiagnosis = NULL,
     estimationTime = NULL,
     weightingResults = NULL,
-    estimation = NULL
+    estimation = NULL,
+    results = NULL
   )
   class(result) <- 'estimatedExternalPerformanceFromStatistics'
   # Create logger
@@ -161,6 +162,7 @@ estimateExternalPerformanceFromStatistics <- function(
     ParallelLogger::logError(glue('Pre-balancing diagnosis status = {preD$status}'))
     result$status <- 'Failure'
     result$estimationTime <- NA
+    result$results = result$preDiagnosis$structuredLog
     return(result)
   }
   # Maintain features and samples according to pre-diagnostic evaluations
@@ -198,11 +200,13 @@ estimateExternalPerformanceFromStatistics <- function(
   if (is.null(resultsMatrix)) {
     ParallelLogger::logError('All results are NULL')
     result$status <- 'Failure'
+    result$results = result$preDiagnosis$structuredLog
     return(result)
   }
   meanResults <- colMeans(resultsMatrix, na.rm = T)
   if (all(is.na(meanResults))) {
     result$status = 'Failure'
+    result$results = result$preDiagnosis$structuredLog
     return(result)
   }
   s <- summarizeBootstrap(resultsMatrix)
@@ -217,9 +221,19 @@ estimateExternalPerformanceFromStatistics <- function(
   result$status <- checkWsmdStatus(resultsMatrix, meanResults, externalEstimatorSettings)
   if (result$status == 'Success') {
     fieldNames <- intersect((names(allResults)), getEstimationFieldNames())
-    result$estimation = data.frame(value=allResults[fieldNames])
+    result$estimation <- data.frame(value=allResults[fieldNames])
   }
+  result$results <- concatResults(result)
   return(result)
+}
+
+concatResults <- function(results) {
+  allResults <- results$preDiagnosis$structuredLog
+  if (!is.null(results$weightingResults))
+    allResults <- rbind(allResults, results$weightingResults)
+  if (!is.null(results$estimation))
+    allResults <- rbind(allResults, results$estimation)
+  return(allResults)
 }
 
 
@@ -497,7 +511,7 @@ summarizeBootstrap <- function(b) {
       se <- sd(r1)
 
       s[[paste('95% lower', measure)]] = exp(m-1.96*se)-1
-      s[[paste('Median', measure)]] = median(r)
+      s[[glue('Median    {measure}')]] = median(r)
       s[[paste('95% upper', measure)]] = exp(m+1.96*se)-1
 
       # s[[paste(measure, 'mean')]] = mean(r, na.rm = TRUE)
