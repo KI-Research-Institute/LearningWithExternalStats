@@ -22,27 +22,31 @@ testSimpleSimulation <- function(probsInt, probsExt, n) {
 }
 # TODO Test unary and binary variable check under different scenarios
 
-n <- 1e4
+n <- 1e5
 
 if (T) {
   probsInt <- c(0.5, 0.2, 0.1, 0.8, 0.9, 0.001, rbeta(500, 1, 10))
   probsExt <- c(0.5, 0.3, 0,     1, 0.4, 0.2, rbeta(500, 1, 10))
   r1 <- testSimpleSimulation(probsInt, probsExt, n)
+  write.csv(r1$structuredLog, 'pre1.csv')
 }
 if (T) {
   probsInt <- c(0.5, 0.2, 0.1,  0.8,    1, 0.01)
   probsExt <- c(0.5, 0.3, 0,      1,    1, 0.2)
   r2 <- testSimpleSimulation(probsInt, probsExt, n)
+  write.csv(r2$structuredLog, 'pre2.csv')
 }
 if (T) {
   probsInt <- c(0.5, 0.2, 0.1, 0.8,   1, 1e-6)
   probsExt <- c(0.5, 0.3, 0,     1, 0.4, 0.2)
   r3 <- testSimpleSimulation(probsInt, probsExt, n)
+  write.csv(r3$structuredLog, 'pre3.csv')
 }
 if (T) {
   probsInt <- c(0.5, 0.2, 0.1,  0.8,    1, 0.1)
   probsExt <- c(0.5, 0.3, 0,      1,    1, 0.2)
-  r2 <- testSimpleSimulation(probsInt, probsExt, n)
+  r4 <- testSimpleSimulation(probsInt, probsExt, n)
+  write.csv(r4$structuredLog, 'pre4.csv')
 }
 
 #p <- 100

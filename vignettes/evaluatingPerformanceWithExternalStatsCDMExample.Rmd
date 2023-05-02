@@ -267,24 +267,10 @@ When the status is `'Success'` the results are given in sub-field `estimation` (
 ```{r message=FALSE, warning=FALSE, eval=TRUE}
 if (estimatedResults$status=='Success') {
   cat('Estimated exteranl performance','\n')
-  showResults <- c(
-    'n', 
-    'n outcome',
-    'Max weight',
-    'chi2 to uniform',
-    'kl',
-    'Max Weighted SMD',
-    'AUROC', 
-    '95% lower AUROC', 
-    '95% upper AUROC', 
-    'n repetitions',
-    'Brier score',
-    'Global calibration mean prediction',
-    'Global calibration observed risk')
-  estimationView <- estimatedResults$estimation[showResults, , drop = F]
+  # estimationView <- estimatedResults$estimation[, , drop = F]
+  estimationView <- estimatedResults$estimation
   # Format the output:
   estimationView[, 'value'] <- apply(estimationView, 1, function(x) {sprintf('%.3g', x)})
-  estimationView['n', 'value'] <- estimatedResults$estimation['n', 'value'] 
   print(estimationView)
 }
 ```
@@ -293,3 +279,19 @@ Here, `n` is the number of samples that recieved a weight greater than zero;
 `chi2 to uniform` and `kl` are the chi squared and Kullback-Leibler divergences between the obtained
 weights and the uniform weights respectively; and `Max Weighted SMD` is the maximal weighted
 standard mean difference between covariates in the external sample and the reweighted sample.
+
+# Assessing diagnostics
+
+```{r message=FALSE, warning=FALSE, eval=TRUE}
+if (estimatedResults$status=='Success') {
+  cat('All results include diagnostics and estimated exteranl performance','\n')
+  resultsView <- estimatedResults$results
+  resultsView[, 'value'] <- apply(resultsView, 1, function(x) 
+    {if (suppressWarnings(!is.na(as.numeric(x)))) sprintf('%.3g',as.numeric(x)) else x})  
+  print(resultsView)
+}
+```
+
+
+
+

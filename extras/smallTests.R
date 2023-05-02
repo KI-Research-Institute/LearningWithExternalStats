@@ -58,6 +58,7 @@ cat(glue('\nExternal AUC = {format(extAuc, digits=3)}'), '\n')
 summary['External AUC', expName] <- extAuc
 summary['Internal AUC', expName] <- internalAUC
 summary[rownames(estimatedLRResults1$results), expName] <- estimatedLRResults1$results
+write.csv(estimatedLRResults1$results, 'results1.csv')
 
 
 # Test dropping a feature
@@ -74,6 +75,7 @@ estimatedLRResults2 <- estimateExternalPerformanceFromStatistics(
 )
 cat(estimatedLRResults2$estimation['AUROC', 'value'], '\n')
 summary[rownames(estimatedLRResults2$results), expName] <- estimatedLRResults2$results
+write.csv(estimatedLRResults2$results, 'results2.csv')
 
 
 expName <- 'Exp.3'
@@ -86,3 +88,4 @@ estimatedLRResults3 <- estimateExternalPerformanceFromStatistics(
 )
 cat(estimatedLRResults3$estimation['AUROC', 'value'], '\n')
 summary[rownames(estimatedLRResults3$results), expName] <- estimatedLRResults3$results
+write.csv(estimatedLRResults3$results, 'results3.csv')
