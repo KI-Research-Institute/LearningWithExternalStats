@@ -50,9 +50,9 @@ proximityAndOffsetTests <- function(testParams, estimationParams, nTest, loadCac
       k <- length(estimationParams)
       for (j in 1:k) {
         aucErrors[(i-1)* length(estimationParams)+j, ] <-
-          res[, glue('Est. AUC {j}')] - res[, 'External AUC']  # error1
+          sapply(res[, glue('Est. AUC {j}')], as.numeric) - res[, 'External AUC']  # error1
         brierErrors[(i-1)* length(estimationParams)+j, ] <-
-          res[, glue('Est. Brier {j}')] - res[, 'External Brier']  # error1
+          sapply(res[, glue('Est. Brier {j}')], as.numeric) - res[, 'External Brier']  # error1
       }
 
     }
