@@ -1,4 +1,4 @@
-#' Post reweighing diagnostics
+#' Post weighting diagnostics
 #'
 #' @description compute diagnostics of weighted samples
 #'
@@ -26,9 +26,26 @@ postDiagnostics <- function(w, z, mu) {
   ParallelLogger::logInfo(glue('Max WSMD {maxWeightedSMD}'))
 
   diagnostics <- list(
-    'Max weight'=max(w),
+    'Max weight' = max(w),
     'chi2 to uniform' = chi2ToUnif,
-    kl = kl,
+    'kl' = kl,
     'Max Weighted SMD' = maxWeightedSMD)  # TODO add diagnostics
   return(diagnostics)
+}
+
+#' Get weighting results field names
+#'
+#' @return a character vector of field names
+#'
+#' @export
+getWeightingResultsFieldNames <- function() {
+  coreFields <- c('Opt err', 'n iter', 'n outcome',
+    # 'Max weight', 'chi2 to uniform', 'kl',
+    'Max Weighted SMD')
+  fields <- coreFields
+  for (f in fields) {
+    fields <- c(fields, glue('95% lower {f}'), glue('Median    {f}'), glue('95% upper {f}'), glue('{f} sd'))
+  }
+  fields <- c('n repetitions', fields)
+  return(fields)
 }

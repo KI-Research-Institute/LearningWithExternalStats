@@ -11,20 +11,21 @@ setwd(script_dir)
 source('./offset-test.R')
 
 # Parameters
-nTest <- 10
+nTest <- 10  # Should be >1
 loadCached = T
 
 testParams <- list(
   binary = T, # type of covariates
-  p=100,  # 2
-  n=2000,  # 2000
-  outcomeOffset = -log(2), #
+  p=NaN,  # 2
+  n=NaN,  # 2000
+  outcomeOffset = NaN, # -log(2),
   sigma_B_Y_X_factor = 3,  # Testing smaller factor means less predictive power of variables ...
   sigma_B_Y_XA_factor = 3,  # Testing ...
   envOffset = 1,  # Testing ...
   loadCached = loadCached,  # load or train from scratch
   trainer = wglmnet()  # wXGBoost()
 )
+# testParams[c('p', 'n', 'outcomeOffset')] <- c(2, 2000, -log(2))
 testParams[c('p', 'n', 'outcomeOffset')] <- c(500, 3e5, -log(250))
 
 modelName <- getModelName(testParams)

@@ -1,3 +1,17 @@
+#' Get field names of structured pre-diagnostic object
+#'
+#' @return a character vector of field names
+#'
+#' @export
+getPreDiagnosticsFieldNames <- function() {
+  fields <- c(
+    "preDiagnosisStatus", "missingInMu", "missingInZ", "nOverlapFeatures", "naInZ", "naInMu",
+    "highlySkewedBinary", "highSkewRepresentative", "incompatableUnaryVariable", "incompatibleUnaryRepresentative",
+    "outOfRange", "outOfRangeRepresentative", "fewSamples", "fewSamplesDescription"
+  )
+  return(fields)
+}
+
 
 #' Pre re-weighting diagnostics
 #'
@@ -17,33 +31,83 @@
 #' @param maxSubset=20000
 #'
 #' @return a named list with the following fields:
-#' ...
+#' \itemize{
+#'   \item{outOfRange}{list of external statistics is out of range of a numeric feature}
+#'   \item{representedFeatures}{names of features }
+#'   \item{zidx}{indices of samples that should be used in reweighting}
+#'   \item{highlySkewedBinary}{list of highly skewed variables}
+#'   \item{status}{a string that determines}
+#'   \item{structuredLog}{A data frame with indicators of prediagnosis results and descriptions, see below}
+#' }
+#'
+#' Structured log is a data-frame with a single value column and the following row names:
+#' \describe{
+#' \item{preDiagnosisStatus}{over all status of diagnostics}
+#' \item{missingInMu}{there are variables in the internal data matrix that are missing in the external statistics}
+#' \item{missingInZ}{variable in the external statistics are missing in the internal data}
+#' \item{nOverlapFeatures}{number of overlapping features}
+#' \item{naInZ}{NA values in the internal data}
+#' \item{naInMu}{NA values in the statistics vector}
+#' \item{highlySkewedBinary}{highly skewed binary variables, generally indicating a few sample in the internal
+#'  dataset but a high proportion of them in the external ones}
+#' \item{highSkewRepresentative'}{an example for a highly skewed variable}
+#' \item{incompatableUnaryVariable'}{value of an internal unary variable is different than the external one more than
+#' a threshold}
+#' \item{incompatibleUnaryRepresentative'}{example for incompatible unary variable}
+#' \item{outOfRange}{externa statistic is out of range}
+#' \item{outOfRangeRepresentative}{example}
+#' \item{fewSamples}{few sample relative to number of }
+#' \item{fewSamplesDescription}{elaboration on number of samples and dimension}
+#' }
 #'
 #' @export
 preDiagnostics <- function(z, mu, maxDiff, npMinRatio = 4, maxSubset=20000) {
+
+  # Init structured log
+  fields <- getPreDiagnosticsFieldNames()
+  structuredLog = data.frame(value=rep(NA, length(fields)), row.names = fields)
+
   nInput <- nrow(z)
   pInput <- ncol(z)
 
-  varNameOverlap <- checkVariableNamesOverlap(z, mu)
-  if (varNameOverlap$status != 'Success')
-    return(list(status='Failure'))
+  overlapLog <- checkVariableNamesOverlap(z, mu)
+  structuredLog[names(overlapLog), 'value'] = unlist(overlapLog)
+  status <- overlapLog$preDiagnosisStatus
 
-  naInZ <- any(is.na(z))
-  if (naInZ) {
+  if (status != 'Success') {
+    ParallelLogger::logError(glue('variable name overlap status = {status}'))
+    return(list(structuredLog=structuredLog, status='Failure'))
+  }
+
+  structuredLog['naInZ', 'value'] <- any(is.na(z))
+  if (structuredLog['naInZ', 'value']) {
     ParallelLogger::logError("Data set has na entries, cannot reweight")
-    return(list(status='Failure'))  # Do we need this
+    status <- 'Failure'
+    structuredLog$preDiagnosisStatus <- 'Failure'
+    return(list(structuredLog=structuredLog, status='Failure'))
   }
   # remove features with Na entries in table1
-  naInMu <- is.na(mu)
-  if (any(naInMu)) {
+  structuredLog['naInMu', 'value'] <- any(is.na(mu))
+  if (structuredLog['naInMu', 'value']) {
     ParallelLogger::logError("Expectation vector has na entries, cannot reweight")
-    return(list(status='Failure'))  # Do we need this
+    status <- 'Failure'
+    structuredLog$preDiagnosisStatus <- 'Failure'
+    return(list(structuredLog=structuredLog, status='Failure'))
   }
-  includeFeatures <- !naInMu
+
   # Regardless of Na status in mu, perform other tests
-  binaryResults <- preCheckBinaryFeatures(z, mu, includeFeatures, maxSubset = maxSubset)
+  binaryResults <- preCheckBinaryFeatures(z, mu, maxSubset = maxSubset)
+  structuredLog['highlySkewedBinary', 'value'] <- length(binaryResults$highlySkewedBinary)>0
+  structuredLog['highSkewRepresentative', 'value'] <- binaryResults$highSkewRepresentative
+  if (structuredLog['highlySkewedBinary', 'value'])
+    status <- 'Failure'
+
   unaryResults <- preCheckUnaryFeatures(z, mu, binaryResults, maxUnaryDiff = maxDiff)
   includeFeatures <- unaryResults$includeFeatures
+  structuredLog['incompatableUnaryVariable', 'value'] <- unaryResults$incompatableUnaryVariable
+  structuredLog['incompatibleUnaryRepresentative', 'value'] <- unaryResults$incompatibleRepresentative
+  if (structuredLog['incompatableUnaryVariable', 'value'])
+    status <- 'Failure'
 
   representedFeatures <- names(mu[includeFeatures])
   # Check range of variables with >1 values
@@ -54,43 +118,55 @@ preDiagnostics <- function(z, mu, maxDiff, npMinRatio = 4, maxSubset=20000) {
   inRangeTol <- maxDiff  # TODO should we use a different param?
   inRange <- (muR >= apply(zR, 2, min)-maxDiff) & (muR <= apply(zR, 2, max)+maxDiff)
   outOfRange <- names(muR)[!inRange]
-  if (length(outOfRange) > 0) {
+  structuredLog['outOfRange', 'value'] <- length(outOfRange) > 0
+  if (structuredLog['outOfRange', 'value']) {
     ParallelLogger::logError('Out of range variables:')
+    f <- outOfRange[1]
+    structuredLog['outOfRangeRepresentative', 'value'] <- glue('{f}, mu={muR[f]}, min={min(zR[,f])}, max={max(zR[ ,f])}')
     for (f in outOfRange)
       ParallelLogger::logWarn(glue('{f}, mu={muR[f]}, min={min(zR[,f])}, max={max(zR[ ,f])}'))
-  }
-  # few samples
-  fewSamples = sum(binaryResults$zidx)/length(representedFeatures) < npMinRatio
-  if (fewSamples) {
-    ParallelLogger::logWarn(glue("Few samples n={sum(binaryResults$zidx)}, p={length(representedFeatures)}"))
+    status <- 'Failure'
   }
 
-  if ( length(outOfRange) > 0 || unaryResults$incompatableUnaryVariable || fewSamples
-       || length(binaryResults$highlySkewedBinary)>0
-       # || length(unaryResults$unaryFeatures) > 0
-  ) {
-    status = 'Failure'
-    ParallelLogger::logWarn(glue('Pre-evaluation diagnosis status = {status}'))
-  } else {
-    status = 'Success'
-    ParallelLogger::logInfo(glue('Pre-evaluation diagnosis status = {status}'))
+  # few samples
+  structuredLog['fewSamples', 'value'] <- sum(binaryResults$zidx)/length(representedFeatures) < npMinRatio
+  if (structuredLog['fewSamples', 'value']) {
+    structuredLog['fewSamplesDescription', 'value'] <-
+      glue("Few samples n={sum(binaryResults$zidx)}, p={length(representedFeatures)}")
+    ParallelLogger::logWarn(structuredLog['fewSamplesDescription', 'value'])
+    status <- 'Failure'
   }
+
+  if ( status != 'Success')
+    ParallelLogger::logWarn(glue('Pre-evaluation diagnosis status = {status}'))
+  else
+    ParallelLogger::logInfo(glue('Pre-evaluation diagnosis status = {status}'))
+  structuredLog['preDiagnosisStatus', 'value'] <- status
+
   return (list(
-    outOfRange = outOfRange,
+    outOfRange = outOfRange,  # External statistics is out of range of a numeric feature
     representedFeatures=representedFeatures,
     zidx = binaryResults$zidx,
-    unaryFeatures = unaryResults$unaryFeatures,
-    incompatableUnaryVariable = unaryResults$incompatableUnaryVariable,
-    highlySkewedBinary=binaryResults$highlySkewedBinary,
-    status = status
+    highlySkewedBinary=binaryResults$highlySkewedBinary,  # list
+    status = status,  # For compatibility and ease of access
+    structuredLog = structuredLog
   ))
 }
 
-
-preCheckBinaryFeatures <- function(z, mu, includeFeatures, maxSubset=20000) {
+#' pre check binary features
+#'
+#' @param z data frame of features
+#' @param mu named vectors of statistics
+#' @param includeFeatures indicators
+#' @param maxSubset max number of samples in training subsets
+#'
+#' @return a list
+#'
+preCheckBinaryFeatures <- function(z, mu, maxSubset=20000) {
   n1 <- nrow(z)
   binaryFeatureIndicators <- apply(z, 2, function(c) {length(unique(c))==2})
-  binaryFeatureIndicators <- binaryFeatureIndicators & includeFeatures
+  includeFeatures <- rep(T, length(binaryFeatureIndicators))
+  names(includeFeatures) <- names(binaryFeatureIndicators)
   # Identify feature that has a single value in the external dataset and the corresponding sub-population in the
   # internal one
   binaryFeatures <- names(mu[binaryFeatureIndicators])
@@ -111,11 +187,13 @@ preCheckBinaryFeatures <- function(z, mu, includeFeatures, maxSubset=20000) {
   ParallelLogger::logInfo(glue('z has {length(binaryFeatures)} binary features'))
   highlySkewedBinary <- getHighlySkewedBinaryFeatures(
     mu[binaryFeatures], z[zidx, binaryFeatures], maxSubset = maxSubset)
-  includeFeatures[binaryFeatures] <- highlySkewedBinary$includeFeature
+  includeFeatures[binaryFeatures] <- highlySkewedBinary$includeFeatures
   return(list(
     includeFeatures=includeFeatures,
     zidx = zidx,
-    highlySkewedBinary=highlySkewedBinary$skewedNames))
+    highlySkewedBinary=highlySkewedBinary$skewedNames,
+    highSkewRepresentative=highlySkewedBinary$highSkewRepresentative
+  ))
 }
 
 
@@ -135,7 +213,10 @@ varProxy <- function(n, n1, muExt) {
 #'
 #' TODO better treatment cases in which binary values may not be 0 or 1. Transform to this form if needed
 #'
+#' @return a list
+#'
 getHighlySkewedBinaryFeatures <- function(mu, z, minNumReport=20, maxDiff=0.01, maxSubset=20000) {
+
   imbalanced <- rep(F, length(mu))
   includeFeatures <- rep(T, length(mu))
   n1s <- rep(NA, length(mu))
@@ -167,13 +248,7 @@ getHighlySkewedBinaryFeatures <- function(mu, z, minNumReport=20, maxDiff=0.01, 
     }
   }
   if (sum(imbalanced) > 0) {
-    if (F) {  # TODO Aggregated skewed features, consider this
-      reportDf <- data.frame(matrix(ncol=2, nrow=sum(imbalanced)))
-      rownames(reportDf) <- names(mu[imbalanced])
-      colnames(reportDf) <- c('Int', 'Ext')
-      reportDf[[1]] <- meanz[imbalanced]
-      reportDf[[2]] <- mu[imbalanced]
-    }
+    skewDescriptions <- rep('', length(imbalanced))
     for (i in which(imbalanced)) {
       f <- names(mu)[i]
       smu <- format(mu[i], digits=3)
@@ -186,14 +261,20 @@ getHighlySkewedBinaryFeatures <- function(mu, z, minNumReport=20, maxDiff=0.01, 
       }
       if (mu[i] < maxDiff)  { # in this case both mu and n1 are small
         includeFeatures[i] <- F
-        ParallelLogger::logInfo(glue('Removing nearly-unary feature {f}: n={n} n1{n1sStr} mean{meanStr} mu={smu}'))
+        skewDescriptions[i] <- glue('Nearly-unary {f}: n={n} n1{n1sStr} mean{meanStr} mu={smu}')
       }
       else
-        ParallelLogger::logWarn(glue('Skewed feature {f}: n={n} n1{n1sStr} mean{meanStr} mu={smu}'))
+        skewDescriptions[i] <- glue('Skewed {f}: n={n} n1{n1sStr} mean{meanStr} mu={smu}')
+      ParallelLogger::logWarn(skewDescriptions[i])
     }
+    varProxies[is.na(varProxies)] <- 0
+    highSkewRepresentative <- skewDescriptions[which.max(varProxies)]
   }
+  else
+    highSkewRepresentative <- NA
   skewedNames <- names(mu[imbalanced & includeFeatures])
-  return(list(skewedNames=skewedNames, includeFeatures=includeFeatures))
+  # Extract high skew representative
+  return(list(skewedNames=skewedNames, includeFeatures=includeFeatures, highSkewRepresentative=highSkewRepresentative))
 }
 
 
@@ -207,36 +288,55 @@ preCheckUnaryFeatures <- function(z, mu, results, maxUnaryDiff=0.01) {
   incompatableUnaryVariable <- F
   nUnary <-sum(unaryFeatures)
   if (nUnary>0) {
-    if (nUnary>1)
-      maxUnarySkew <- max(abs(colMeans(z[, unaryFeatures])-mu[unaryFeatures]))
-    else
-      maxUnarySkew <- mean(z[, unaryFeatures])-mu[unaryFeatures]
+    meanUnaryMu <- mu[unaryFeatures]
+    if (nUnary>1) {
+      meanUnaryZ <- colMeans(z[, unaryFeatures])
+      unarySkew <- abs(meanUnaryZ-meanUnaryMu)
+      maxUnarySkew <- max(unarySkew)
+      f <- featureNames[unaryFeatures][which.max(unarySkew)]
+      representative <- glue('{f}: mean z={meanUnaryZ[f]}, mu={meanUnaryMu[f]}')
+    }
+    else {
+      meanUnaryZ <- mean(z[, unaryFeatures])
+      maxUnarySkew <- abs(meanUnaryZ-meanUnaryMu)
+      representative <- glue('{names(mu)[unaryFeatures]}: mean z={meanUnaryZ}, mu={meanUnaryMu}')
+    }
+    cat('Max unary skew', maxUnarySkew, 'max diff', maxUnaryDiff, '\n')
     if (maxUnarySkew > maxUnaryDiff) {
       ParallelLogger::logWarn('Incopatible unary variables:')
       incompatableUnaryVariable <- T
       for (f in (featureNames[unaryFeatures]))
         if (mean(z[ ,f]) != mu[f])
           ParallelLogger::logError(glue('unary {f}, internal={mean(z[ ,f])}, external={mu[f]}'))
-    }
+    } else
+      representative <- NA
     includeFeatures <- includeFeatures & !unaryFeatures
-  }
+  } else
+    representative <- NA
   return(list(
     includeFeatures=includeFeatures,
     incompatableUnaryVariable = incompatableUnaryVariable,
-    unaryFeatures = featureNames[unaryFeatures]))
+    unaryFeatures = featureNames[unaryFeatures],
+    incompatibleRepresentative = representative))
 }
 
-
+#' Check overlap of variables names
+#'
+#' @param z a data-frame
+#' @param mu named vector
+#'
 checkVariableNamesOverlap <- function(z, mu) {
+
   zMinusMu <- !colnames(z) %in% names(mu)
   n <- sum(zMinusMu)
-  status <- 'Success'
+  result <- list(preDiagnosisStatus = 'Success', missingInMu = F, missingInZ = F, nOverlapFeatures = NaN)
   if (n>0) {
     ParallelLogger::logWarn(glue('{n} variables are in z but not in mu'))
     missingVars <- colnames(z)[zMinusMu]
     for (i in 1:n)
       ParallelLogger::logWarn(glue('{missingVars[i]} is in z but not in mu'))
-    status <- 'Missing-in-mu'
+    result$missingInMu <- T
+    result$preDiagnosisStatus <- 'Failure'
   }
   muMinusZ <- !names(mu) %in% colnames(z)
   n <- sum(muMinusZ)
@@ -245,10 +345,19 @@ checkVariableNamesOverlap <- function(z, mu) {
     missingVars <- names(mu)[muMinusZ]
     for (i in 1:n)
       ParallelLogger::logWarn(glue('{missingVars[i]} is in mu but not in z'))
-    status <- 'Missing-in-z'
+    result$missingInZ <- T
+    result$preDiagnosisStatus <- 'Failure'
   }
-  muIntersection <- names(mu)[!muMinusZ]
-  if (length(muIntersection)<2)
-    ParallelLogger::logWarn(glue('z and mu have only {length(muIntersection)} overlapping variable names'))
-  return(list(muIntersection=muIntersection, status=status))
+  result$nOverlapFeatures <- sum(!muMinusZ)
+  if (result$nOverlapFeatures==1)
+    ParallelLogger::logWarn(
+      glue('z and mu have only one overlapping variable names'))
+  else {
+    if (result$nOverlapFeatures==0) {
+      ParallelLogger::logWarn(
+        glue('z and mu do not have overlapping variable names'))
+      result$preDiagnosisStatus = 'Failure'
+    }
+  }
+  return(result)
 }

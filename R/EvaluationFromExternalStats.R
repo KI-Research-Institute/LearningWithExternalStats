@@ -63,6 +63,28 @@ createExternalEstimatorSettings <- function(
 }
 
 
+
+#' Get estimation field names
+#'
+#' @return a character vector of field names
+#'
+#' @export
+getEstimationFieldNames <- function() {
+  coreFields <- c(
+    'AUROC',
+    'Brier score',
+    'Global calibration mean prediction',
+    'Global calibration observed risk'
+  )
+  fields <- coreFields
+  for (f in fields) {
+    fields <- c(fields, glue('95% lower {f}'), glue('Median    {f}'), glue('95% upper {f}'), glue('{f} sd'))
+  }
+  return(fields)
+}
+
+
+
 #' Estimate external model performance from statistics and internal
 #' test data
 #'
@@ -88,8 +110,13 @@ createExternalEstimatorSettings <- function(
 #'   \item{\code{status}:} {execution status, either \code{'Success'} or \code{'Failure'}}
 #'   \item{\code{preDiagnosis}:} {Pre-diagnosis results object}
 #'   \item{\code{estimationTime}:} {execution time}
+#'   \item{\code{weightingResults}:} {a data-frame with a single column \code{'value'} and row-names that determine
+#'   weighting status, specifically: \code{Opt err} is the optimization error, \code{n iter}, number of iterations,
+#'   \code{n outcome} number of outcomes in bootstrap samples; and \code{Max Weighted SMD} is the maximum over
+#'   features of standardized mean difference between internal weighted averages and external statistics.
+#'   This data frame includes also bootstrap statistics for each of these elements.}
 #'   \item{\code{estimation}:} {a data-frame with a single column \code{'value'} and row-names that determine various
-#'   estimators.}
+#'   performance metrics.}
 #'   }
 #'
 #' @export
@@ -105,7 +132,9 @@ estimateExternalPerformanceFromStatistics <- function(
     status = NULL,
     preDiagnosis = NULL,
     estimationTime = NULL,
-    estimation = NULL
+    weightingResults = NULL,
+    estimation = NULL,
+    results = NULL
   )
   class(result) <- 'estimatedExternalPerformanceFromStatistics'
   # Create logger
@@ -133,6 +162,7 @@ estimateExternalPerformanceFromStatistics <- function(
     ParallelLogger::logError(glue('Pre-balancing diagnosis status = {preD$status}'))
     result$status <- 'Failure'
     result$estimationTime <- NA
+    result$results = result$preDiagnosis$structuredLog
     return(result)
   }
   # Maintain features and samples according to pre-diagnostic evaluations
@@ -170,21 +200,40 @@ estimateExternalPerformanceFromStatistics <- function(
   if (is.null(resultsMatrix)) {
     ParallelLogger::logError('All results are NULL')
     result$status <- 'Failure'
+    result$results = result$preDiagnosis$structuredLog
     return(result)
   }
   meanResults <- colMeans(resultsMatrix, na.rm = T)
   if (all(is.na(meanResults))) {
     result$status = 'Failure'
+    result$results = result$preDiagnosis$structuredLog
     return(result)
   }
   s <- summarizeBootstrap(resultsMatrix)
+  allResults <- unlist(c(list(as.list(meanResults), as.list(s))))
+  # Add weighting results
+  fieldNames <- intersect((names(allResults)), getWeightingResultsFieldNames())
+  if (length(fieldNames)>0)
+    result$weightingResults <- data.frame(value=allResults[fieldNames])
 
   # Process post diagnostic information
   # TODO add a post diagnostic that measures 'effective sample size'
   result$status <- checkWsmdStatus(resultsMatrix, meanResults, externalEstimatorSettings)
-  if (result$status == 'Success')
-    result$estimation = data.frame(value=unlist(c(list(as.list(meanResults), as.list(s)))))
+  if (result$status == 'Success') {
+    fieldNames <- intersect((names(allResults)), getEstimationFieldNames())
+    result$estimation <- data.frame(value=allResults[fieldNames])
+  }
+  result$results <- concatResults(result)
   return(result)
+}
+
+concatResults <- function(results) {
+  allResults <- results$preDiagnosis$structuredLog
+  if (!is.null(results$weightingResults))
+    allResults <- rbind(allResults, results$weightingResults)
+  if (!is.null(results$estimation))
+    allResults <- rbind(allResults, results$estimation)
+  return(allResults)
 }
 
 
@@ -223,7 +272,7 @@ transformResultListToMatrix <- function(resultsList) {
   nSubsets <- length(resultsList)
   for (k in 1:nSubsets) {
     if (!is.null(resultsList[[k]])) {
-      resultsNames <- names(resultsList[[k]])
+      resultsNames <- union(names(resultsList[[k]]), resultsNames)
       nResults <- nResults + 1
     }
   }
@@ -235,7 +284,8 @@ transformResultListToMatrix <- function(resultsList) {
   for (k in 1:nSubsets) {
     if (!is.null(resultsList[[k]])) {
       iResult = iResult + 1
-      resultsMatrix[iResult ,] <- resultsList[[k]]
+      availableCols <- intersect(names(resultsList[[k]]), resultsNames)
+      resultsMatrix[iResult, availableCols] <- resultsList[[k]][availableCols]
     }
   }
   return(resultsMatrix)
@@ -416,17 +466,15 @@ estimateFullSetPerformance <- function(internalData, externalStats, estimationPa
       # Performance measures
       m <- getPerformanceMeasures(internalData$y[widx], internalData$p[widx], w[widx])
       dbRes <- c(dbRes, m)
-      return (list(dbRes=(unlist(dbRes)), reweightResults=reweightResults))
     }
     else {
       ParallelLogger::logWarn('w containtes NA')
-      return(NULL)
     }
   }
   else {
     ParallelLogger::logWarn('Optimizer status != Success')
-    return (NULL)
   }
+  return (list(dbRes=(unlist(dbRes)), reweightResults=reweightResults))
 }
 
 
@@ -447,25 +495,24 @@ summarizeBootstrap <- function(b) {
   nboot <- nrow(b)
   s <- list()
   for (measure in colnames(b)) {
-    r <- b[,measure]  # TODO learn how to extract vectors from matrices
-    if (min(r)>-1) {
+    r <- b[,measure]
+    minval <- min(r, na.rm = T)
+    if (!is.na(minval) & minval>-1) {
 
-      resultsQuantiles <- quantile(r, probs = probs, na.rm = TRUE)
-      s[[paste('prc lower', measure)]] = resultsQuantiles[[1]]
-      s[[paste('prc upper', measure)]] = resultsQuantiles[[2]]
+      # resultsQuantiles <- quantile(r, probs = probs, na.rm = TRUE)
 
       # Standard normal interval assuming a zero bias
       # TODO correct for biases in case there is a complete sample
       # TODO tailor transformations to specific metrics
       r1 <- log(1+r)
-      m <- mean(r1)
-      se <- sd(r1)
+      m <- mean(r1, na.rm = T)
+      se <- sd(r1, na.rm = T)
 
-      s[[paste('95% lower', measure)]] = exp(m-1.96*se)-1
-      s[[paste('Median', measure)]] = median(r)
-      s[[paste('95% upper', measure)]] = exp(m+1.96*se)-1
+      s[[glue('95% lower {measure}')]] = exp(m-1.96*se)-1
+      s[[glue('Median    {measure}')]] = median(r, na.rm = T)
+      s[[glue('95% upper {measure}')]] = exp(m+1.96*se)-1
 
-      s[[paste(measure, 'mean')]] = mean(r, na.rm = TRUE)
+      # s[[paste(measure, 'mean')]] = mean(r, na.rm = TRUE)
       s[[paste(measure, 'sd')]] = sd(r, na.rm = TRUE)
     }
   }
@@ -504,7 +551,7 @@ getPerformanceMeasures <- function(y, p, w=NULL) {
     return(NULL)
   }
   return(list('AUROC' = pAuc,
-              'Log likelyhood' = pLogLike,
+              # 'Log likelyhood' = pLogLike,
               'Brier score' = pBrier,
               'Global calibration mean prediction' = pMeanPredictionRisk,
               'Global calibration observed risk' = pMeanObservedRisk
