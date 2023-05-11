@@ -272,7 +272,7 @@ transformResultListToMatrix <- function(resultsList) {
   nSubsets <- length(resultsList)
   for (k in 1:nSubsets) {
     if (!is.null(resultsList[[k]])) {
-      resultsNames <- names(resultsList[[k]])
+      resultsNames <- union(names(resultsList[[k]]), resultsNames)
       nResults <- nResults + 1
     }
   }
@@ -284,7 +284,8 @@ transformResultListToMatrix <- function(resultsList) {
   for (k in 1:nSubsets) {
     if (!is.null(resultsList[[k]])) {
       iResult = iResult + 1
-      resultsMatrix[iResult ,] <- resultsList[[k]]
+      availableCols <- intersect(names(resultsList[[k]]), resultsNames)
+      resultsMatrix[iResult, availableCols] <- resultsList[[k]][availableCols]
     }
   }
   return(resultsMatrix)
@@ -469,12 +470,12 @@ estimateFullSetPerformance <- function(internalData, externalStats, estimationPa
     }
     else {
       ParallelLogger::logWarn('w containtes NA')
-      return(NULL)
+      return (list(dbRes=(unlist(dbRes)), reweightResults=reweightResults))
     }
   }
   else {
     ParallelLogger::logWarn('Optimizer status != Success')
-    return (NULL)
+    return (list(dbRes=(unlist(dbRes)), reweightResults=reweightResults))
   }
 }
 
@@ -497,7 +498,8 @@ summarizeBootstrap <- function(b) {
   s <- list()
   for (measure in colnames(b)) {
     r <- b[,measure]
-    if (min(r)>-1) {
+    minval <- min(r, na.rm = T)
+    if (!is.na(minval) & minval>-1) {
 
       resultsQuantiles <- quantile(r, probs = probs, na.rm = TRUE)
       # s[[paste('NP lower', measure)]] = resultsQuantiles[[1]]
