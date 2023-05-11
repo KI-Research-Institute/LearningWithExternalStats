@@ -11,7 +11,7 @@ setwd(script_dir)
 source('./offset-test.R')
 
 # Parameters
-nTest <- 10
+nTest <- 10  # Should be >1
 loadCached = T
 
 testParams <- list(

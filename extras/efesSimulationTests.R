@@ -199,17 +199,33 @@ testSimulatedData <- function(testParams, testNum) {
     'AUC' = 'AUROC',
     'Brier' = 'Brier score',
     'Calibration prediction' = 'Global calibration mean prediction',
-    'Calibration observed' = 'Global calibration observed risk',
-    'Opt err' = 'Opt err',
-    'n iter' = 'n iter'
+    'Calibration observed' = 'Global calibration observed risk'
   )
   for (i in 1:length(testParams$estimationParams)) {
-    estResults <- estimatePerformance(testParams, i, d, pInternal, vars1)
 
+    estResults <- estimatePerformance(testParams, i, d, pInternal, vars1)
     fieldNames <- sapply(getPreDiagnosticsFieldNames(), function(x) glue('{x} {i}'))
     results[fieldNames] <- estResults$results[getPreDiagnosticsFieldNames(), 'value']
 
-    # if (estResults$status == 'Success') {
+    if (!is.null(estResults$weightingResults)) {
+      for (metric in c('Opt err', 'n iter')) {
+        a <- metric
+        results[glue('Est. {metric} {i}')] <- estResults$results[a, 'value']
+        results[glue('Est. {metric} {i} low')] <- estResults$results[glue('95% lower {a}'), 'value']
+        results[glue('Est. {metric} {i} high')] <- estResults$results[glue('95% upper {a}'), 'value']
+      }
+      results[glue('Estimation Time {i}')] <- estResults$estimationTime
+    }
+    else {
+      for (metric in c('Opt err', 'n iter')) {
+        results[glue('Est. {metric} {i}')] <- NA
+        results[glue('Est. {metric} {i} low')] <- NA
+        results[glue('Est. {metric} {i} high')] <- NA
+      }
+      results[glue('Estimation Time {i}')] <- estResults$estimationTime
+      cat('Failed test', i, '\n')
+    }
+
     if (!is.null(estResults$estimation)) {
       for (metric in names(abbrevations)) {
         a <- abbrevations[[metric]]
@@ -217,7 +233,6 @@ testSimulatedData <- function(testParams, testNum) {
         results[glue('Est. {metric} {i} low')] <- estResults$results[glue('95% lower {a}'), 'value']
         results[glue('Est. {metric} {i} high')] <- estResults$results[glue('95% upper {a}'), 'value']
       }
-      results[glue('Estimation Time {i}')] <- estResults$estimationTime
       for (metric in c('Max Weighted SMD'))  # , 'chi2 to uniform', 'kl'
         results[glue('{metric} {i}')] <- estResults$results[metric, 'value']
     }
@@ -227,12 +242,12 @@ testSimulatedData <- function(testParams, testNum) {
         results[glue('Est. {metric} {i} low')] <- NA
         results[glue('Est. {metric} {i} high')] <- NA
       }
-      results[glue('Estimation Time {i}')] <- estResults$estimationTime
       for (metric in c('Max Weighted SMD')) # , 'chi2 to uniform', 'kl'
         results[glue('{metric} {i}')] <- NA
       cat('Failed test', i, '\n')
     }
   }
+
   return(results)
 }
 
@@ -273,13 +288,10 @@ repeatedTests <- function(params) {
   res <- data.frame(matrix(ncol=length(r), nrow=params$nTest))
   colnames(res) <- names(r)
   res[1, ] <- r
-  print(res)
-  print(file.path(params$outputDir, glue('{testName} 1-1.csv')))
   write.csv(res[1, ], file.path(params$outputDir, glue('{testName} 1-1.csv')))
   for (i in 2:params$nTest) {
     r <- testSimulatedData(params, i)
     res[i, ] <- r
-    # print(res)
     write.csv(res[1:i, ], file.path(params$outputDir, glue('{testName} 1-{i}.csv')))
     cat(glue('Completed test {i}'), '\n')
   }
@@ -287,7 +299,6 @@ repeatedTests <- function(params) {
   for (k in 1:length(params$estimationParams)) {
     res[glue('err {k}')] <- abs(sapply(res[glue('Est. AUC {k}')], as.numeric) - res['External AUC'])
   }
-  print(res)
   write.csv(res, file.path(params$outputDir, glue('{testName}.csv')))
   return(res)
 }

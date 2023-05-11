@@ -26,7 +26,7 @@ proximityAndOffsetTests <- function(testParams, estimationParams, nTest, loadCac
   dir.create(outputDir, showWarnings = F)
   dir.create(dataDir, showWarnings = F)
 
-  for (sigma_B_X_AH in c(0, 0.5)) {  # Degree of proximity assumption violation
+  for (sigma_B_X_AH in c(0.5, 0)) {  # Degree of proximity assumption violation
 
     aucErrors  <- array(dim=c(nOffsets * length(estimationParams), nTest))
     brierErrors  <- array(dim=c(nOffsets * length(estimationParams), nTest))

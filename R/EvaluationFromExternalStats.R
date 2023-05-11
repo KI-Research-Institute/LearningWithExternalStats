@@ -466,17 +466,15 @@ estimateFullSetPerformance <- function(internalData, externalStats, estimationPa
       # Performance measures
       m <- getPerformanceMeasures(internalData$y[widx], internalData$p[widx], w[widx])
       dbRes <- c(dbRes, m)
-      return (list(dbRes=(unlist(dbRes)), reweightResults=reweightResults))
     }
     else {
       ParallelLogger::logWarn('w containtes NA')
-      return (list(dbRes=(unlist(dbRes)), reweightResults=reweightResults))
     }
   }
   else {
     ParallelLogger::logWarn('Optimizer status != Success')
-    return (list(dbRes=(unlist(dbRes)), reweightResults=reweightResults))
   }
+  return (list(dbRes=(unlist(dbRes)), reweightResults=reweightResults))
 }
 
 
@@ -501,20 +499,18 @@ summarizeBootstrap <- function(b) {
     minval <- min(r, na.rm = T)
     if (!is.na(minval) & minval>-1) {
 
-      resultsQuantiles <- quantile(r, probs = probs, na.rm = TRUE)
-      # s[[paste('NP lower', measure)]] = resultsQuantiles[[1]]
-      # s[[paste('NP upper', measure)]] = resultsQuantiles[[2]]
+      # resultsQuantiles <- quantile(r, probs = probs, na.rm = TRUE)
 
       # Standard normal interval assuming a zero bias
       # TODO correct for biases in case there is a complete sample
       # TODO tailor transformations to specific metrics
       r1 <- log(1+r)
-      m <- mean(r1)
-      se <- sd(r1)
+      m <- mean(r1, na.rm = T)
+      se <- sd(r1, na.rm = T)
 
-      s[[paste('95% lower', measure)]] = exp(m-1.96*se)-1
-      s[[glue('Median    {measure}')]] = median(r)
-      s[[paste('95% upper', measure)]] = exp(m+1.96*se)-1
+      s[[glue('95% lower {measure}')]] = exp(m-1.96*se)-1
+      s[[glue('Median    {measure}')]] = median(r, na.rm = T)
+      s[[glue('95% upper {measure}')]] = exp(m+1.96*se)-1
 
       # s[[paste(measure, 'mean')]] = mean(r, na.rm = TRUE)
       s[[paste(measure, 'sd')]] = sd(r, na.rm = TRUE)
