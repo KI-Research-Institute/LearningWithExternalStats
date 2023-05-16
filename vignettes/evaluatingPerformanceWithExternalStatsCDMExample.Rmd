@@ -278,13 +278,11 @@ if (estimatedResults$status=='Success') {
 
 More comprehensive results are in the `results` field:
 ```{r message=FALSE, warning=FALSE, eval=TRUE}
-if (estimatedResults$status=='Success') {
-  cat('All results include diagnostics and estimated exteranl performance','\n')
-  resultsView <- estimatedResults$results
-  resultsView[, 'value'] <- apply(resultsView, 1, function(x) 
-    {if (suppressWarnings(!is.na(as.numeric(x)))) sprintf('%.3g',as.numeric(x)) else x})  
-  print(resultsView)
-}
+cat('All results include diagnostics and estimated exteranl performance','\n')
+resultsView <- estimatedResults$results
+resultsView[, 'value'] <- apply(resultsView, 1, function(x) 
+  {if (suppressWarnings(!is.na(as.numeric(x)))) sprintf('%.3g',as.numeric(x)) else x})  
+print(resultsView)
 ```
 
 Here, `n` is the number of samples that recieved a weight greater than zero;
