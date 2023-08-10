@@ -74,11 +74,9 @@ estimatedLRResults2 <- estimateExternalPerformanceFromStatistics(
   externalStats = reducedMu,
   externalEstimatorSettings = externalEstimatorSettings
 )
-if (estimatedLRResults2$status == 'Success') {
-  cat(estimatedLRResults2$estimation['AUROC', 'value'], '\n')
-  summary[rownames(estimatedLRResults2$results), expName] <- estimatedLRResults2$results
-  write.csv(estimatedLRResults2$results, 'results2.csv')
-}
+cat(estimatedLRResults2$estimation['AUROC', 'value'], '\n')
+summary[rownames(estimatedLRResults2$results), expName] <- estimatedLRResults2$results
+write.csv(estimatedLRResults2$results, 'results2.csv')
 
 expName <- 'Exp.3'
 internalData$z <- internalData$z[, !colnames(internalData$z) %in% excludeVars]
@@ -88,8 +86,6 @@ estimatedLRResults3 <- estimateExternalPerformanceFromStatistics(
   externalStats = muExt,
   externalEstimatorSettings = externalEstimatorSettings
 )
-if (estimatedLRResults2$status == 'Success') {
-  cat(estimatedLRResults3$estimation['AUROC', 'value'], '\n')
-  summary[rownames(estimatedLRResults3$results), expName] <- estimatedLRResults3$results
-  write.csv(estimatedLRResults3$results, 'results3.csv')
-}
+cat(estimatedLRResults3$estimation['AUROC', 'value'], '\n')
+summary[rownames(estimatedLRResults3$results), expName] <- estimatedLRResults3$results
+write.csv(estimatedLRResults3$results, 'results3.csv')

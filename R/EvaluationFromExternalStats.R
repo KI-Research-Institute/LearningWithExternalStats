@@ -157,10 +157,7 @@ estimateExternalPerformanceFromStatistics <- function(
     maxDiff = externalEstimatorSettings$maxDiff,
     maxSubset = externalEstimatorSettings$nMaxReweight
     )
-  result$preDiagnosis <- list()
-  result$preDiagnosis$outOfRange <- preD$outOfRange
-  result$preDiagnosis$highlySkewedBinary <- preD$highlySkewedBinary
-  result$preDiagnosis$status <- preD$status
+  result$preDiagnosis <- preD
 
   if (preD$status != 'Success') {
     ParallelLogger::logError(glue('Pre-balancing diagnosis status = {preD$status}'))
@@ -176,6 +173,8 @@ estimateExternalPerformanceFromStatistics <- function(
   internalData$p <- internalData$p[preD$zidx]
   # Initialize sub-samples
   n <- sum(preD$zidx)  # TODO CHANGE TO NROWS(Z)
+  result$preDiagnosis$zidx <- NULL
+
   nSubsets <- externalEstimatorSettings$nRepetitions
   if (externalEstimatorSettings$nMaxReweight < n*0.75)  { # TODO figure this out
     if (externalEstimatorSettings$stratified)
