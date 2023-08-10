@@ -35,7 +35,7 @@ createExternalEstimatorSettings <- function(
     nRepetitions = 1,
     stratifiedSampling = T,
     maxDiff = 0.01,
-    maxWSMD = 0.1,
+    maxWSMD = 0.05,
     outputDir = getwd(),
     maxCores = 1,
     shortName = NULL,
@@ -157,7 +157,11 @@ estimateExternalPerformanceFromStatistics <- function(
     maxDiff = externalEstimatorSettings$maxDiff,
     maxSubset = externalEstimatorSettings$nMaxReweight
     )
-  result$preDiagnosis <- preD
+  result$preDiagnosis <- list()
+  result$preDiagnosis$outOfRange <- preD$outOfRange
+  result$preDiagnosis$highlySkewedBinary <- preD$highlySkewedBinary
+  result$preDiagnosis$status <- preD$status
+
   if (preD$status != 'Success') {
     ParallelLogger::logError(glue('Pre-balancing diagnosis status = {preD$status}'))
     result$status <- 'Failure'

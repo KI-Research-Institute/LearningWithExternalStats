@@ -21,10 +21,11 @@ muExt <- colMeans(dTransformedExt)
 
 
 externalEstimatorSettings <- createExternalEstimatorSettings(
-  reweightAlgorithm = seTunedWeightOptimizer(), # cvxWeightOptimizer(),
+  reweightAlgorithm = seTunedWeightOptimizer(maxSuccessMSE = 1e-4), # cvxWeightOptimizer(),
   nMaxReweight = 10000,
   nRepetitions = 10,
-  maxCores = 3
+  maxCores = 3,
+  maxWSMD = 0.1
 )
 
 internalData <- list(z=dTransformedInt, p = pInternal, y = d$internalTest[['Y']])
@@ -73,10 +74,11 @@ estimatedLRResults2 <- estimateExternalPerformanceFromStatistics(
   externalStats = reducedMu,
   externalEstimatorSettings = externalEstimatorSettings
 )
-cat(estimatedLRResults2$estimation['AUROC', 'value'], '\n')
-summary[rownames(estimatedLRResults2$results), expName] <- estimatedLRResults2$results
-write.csv(estimatedLRResults2$results, 'results2.csv')
-
+if (estimatedLRResults2$status == 'Success') {
+  cat(estimatedLRResults2$estimation['AUROC', 'value'], '\n')
+  summary[rownames(estimatedLRResults2$results), expName] <- estimatedLRResults2$results
+  write.csv(estimatedLRResults2$results, 'results2.csv')
+}
 
 expName <- 'Exp.3'
 internalData$z <- internalData$z[, !colnames(internalData$z) %in% excludeVars]
@@ -86,6 +88,8 @@ estimatedLRResults3 <- estimateExternalPerformanceFromStatistics(
   externalStats = muExt,
   externalEstimatorSettings = externalEstimatorSettings
 )
-cat(estimatedLRResults3$estimation['AUROC', 'value'], '\n')
-summary[rownames(estimatedLRResults3$results), expName] <- estimatedLRResults3$results
-write.csv(estimatedLRResults3$results, 'results3.csv')
+if (estimatedLRResults2$status == 'Success') {
+  cat(estimatedLRResults3$estimation['AUROC', 'value'], '\n')
+  summary[rownames(estimatedLRResults3$results), expName] <- estimatedLRResults3$results
+  write.csv(estimatedLRResults3$results, 'results3.csv')
+}

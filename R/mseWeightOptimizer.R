@@ -19,7 +19,7 @@
 #' @export
 seTunedWeightOptimizer <- function(
     alphas = c(0.01, 0.03, 0.1, 0.3, 0.5), minSd=1e-4, w0 = NULL,  nTuneIter=50, nIter=2000, outputDir=NULL,
-    absTol=1e-8, momentumC=0.9, approxUpdate=F, absMaxUnivariateTol=1e-9, experimental=F, maxSuccessMSE=1e-4)
+    absTol=1e-8, momentumC=0.9, approxUpdate=F, absMaxUnivariateTol=1e-9, experimental=F, maxSuccessMSE=1e-5)
 {
   l <- list(
     shortName = 'W-MSE',

@@ -17,7 +17,7 @@ seTunedWeightOptimizer(
   approxUpdate = F,
   absMaxUnivariateTol = 1e-09,
   experimental = F,
-  maxSuccessMSE = 1e-04
+  maxSuccessMSE = 1e-05
 )
 }
 \arguments{
