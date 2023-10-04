@@ -44,7 +44,7 @@ test_that("algorithm detects missing stats", {
 
   replaceSimpleLoggerThreshold('WARN')
 
-  excludeVars <- c('X3_Table1T_times_y1', 'X3_Table1T_times_y0')
+  excludeVars <- c('X3:y1', 'X3:y0')
   d <- LearningWithExternalStats::anchorData1
   model1 <- LearningWithExternalStats::anchorLR1
   pInternal <- predictGLM(d$internalTest, model1)
@@ -68,7 +68,7 @@ test_that("algorithm detects missing internal features", {
 
   replaceSimpleLoggerThreshold('WARN')
 
-  excludeVars <- c('X3_Table1T_times_y1', 'X3_Table1T_times_y0')
+  excludeVars <- c('X3:y1', 'X3:y0')
   d <- LearningWithExternalStats::anchorData1
   model1 <- LearningWithExternalStats::anchorLR1
   pInternal <- predictGLM(d$internalTest, model1)
