@@ -13,6 +13,7 @@ source('./mlWrappers/wrpart.R')
 # source('./mlWrappers/wkeras.R')
 source('./mlWrappers/wrappedml.R')
 source('./simulations/anchorModelSimulator.R')
+source('./transformByType.R')
 
 
 getDefaultEfesTestParams <- function(outputDir) {
@@ -160,6 +161,7 @@ testSimulatedData <- function(testParams, testNum) {
   # vars1 <- wimportantGlmnet(model1, testParams$ntop)
   vars1 <- wimportant(model1)
   cat('Number of selected variables' ,length(vars1), '\n')
+  wprintGlmnet(model1)
 
   # Predict the label probabilities in the internal test set
   internalX <- sapply(d$internalTest[xFeatures], as.numeric)
@@ -255,14 +257,20 @@ testSimulatedData <- function(testParams, testNum) {
 estimatePerformance <- function(testParams, i, d, pInternal, vars1) {
   ## Estimation using reweighing
   # TODO HIGHDIM
+  estimationParams <- testParams$estimationParams[[i]]
 
   internalK <- d$internalTest[, c(vars1, 'Y')]
   externalK <- d$externalTest[, c(vars1, 'Y')]
-  dTransformedInt <- computeTable1LikeTransformation(internalK, outcomeBalance=TRUE)
-  dTransformedExt <- computeTable1LikeTransformation(externalK, outcomeBalance=TRUE)
+  transformType <- estimationParams[[1]]
+
+  cat('\n\n--- estimating performance ---\n\n')
+
+  dTransformedInt <- transformByType(transformType, internalK, interactionVar = vars1[1])
+  dTransformedExt <- transformByType(transformType, externalK, interactionVar = vars1[1])
+
+  print(colnames(dTransformedInt))
   muExt <- colMeans(dTransformedExt)
   internalData <- list(z=dTransformedInt, p = pInternal, y = internalK[['Y']])
-  estimationParams <- testParams$estimationParams[[i]]
 
   saveDataCSV <- F
   if (saveDataCSV) {
@@ -273,10 +281,13 @@ estimatePerformance <- function(testParams, i, d, pInternal, vars1) {
       data.frame(mean.value=muExt), file = file.path(testParams$outputDir, glue('{csvPrefix} external means.csv')))
   }
 
+  estimatorSettings  <- createExternalEstimatorSettings(
+    reweightAlgorithm = estimationParams[[2]], nRepetitions = 1, outputDir = outputDir, maxCores = 1)
+
   res <- estimateExternalPerformanceFromStatistics(
     internalData = internalData,
     externalStats = muExt,
-    externalEstimatorSettings = estimationParams)
+    externalEstimatorSettings = estimatorSettings)
   return(res)
 }
 

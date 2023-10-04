@@ -31,6 +31,9 @@ proximityAndOffsetTests <- function(testParams, estimationParams, nTest, loadCac
     aucErrors  <- array(dim=c(nOffsets * length(estimationParams), nTest))
     brierErrors  <- array(dim=c(nOffsets * length(estimationParams), nTest))
 
+    optErrors  <- array(dim=c(nOffsets * length(estimationParams), nTest))
+    nIters  <- array(dim=c(nOffsets * length(estimationParams), nTest))
+
     for (i in 1:nOffsets) {
       outcomeOffset <- outcomeOffsets[i]
       testParams$sigma_B_X_AH <- sigma_B_X_AH
@@ -49,12 +52,12 @@ proximityAndOffsetTests <- function(testParams, estimationParams, nTest, loadCac
 
       k <- length(estimationParams)
       for (j in 1:k) {
-        aucErrors[(i-1)* length(estimationParams)+j, ] <-
-          sapply(res[, glue('Est. AUC {j}')], as.numeric) - res[, 'External AUC']  # error1
-        brierErrors[(i-1)* length(estimationParams)+j, ] <-
-          sapply(res[, glue('Est. Brier {j}')], as.numeric) - res[, 'External Brier']  # error1
+        currIdx <- (i-1)* length(estimationParams)+j
+        aucErrors[currIdx, ] <- sapply(res[, glue('Est. AUC {j}')], as.numeric) - res[, 'External AUC']  # error1
+        brierErrors[currIdx, ] <- sapply(res[, glue('Est. Brier {j}')], as.numeric) - res[, 'External Brier']  # error1
+        optErrors[currIdx, ] <- res[, glue('Est. Opt err {j}')]
+        nIters[currIdx, ] <- res[, glue('Est. n iter {j}')]
       }
-
     }
 
     legendLabels <- vector(mode = 'list', length = k)
@@ -64,6 +67,8 @@ proximityAndOffsetTests <- function(testParams, estimationParams, nTest, loadCac
     summaryName <- glue('{getModelName(testParams)}-s{sigma_B_X_AH}')
     write.csv(aucErrors, file.path(outputDir, glue('{summaryName} AUC.csv')))
     write.csv(brierErrors, file.path(outputDir, glue('{summaryName} Brier.csv')))
+    write.csv(optErrors, file.path(outputDir, glue('{summaryName} Opt err.csv')))
+    write.csv(nIters, file.path(outputDir, glue('{summaryName} n Iter.csv')))
 
     plotOffsetResults(outputDir, summaryName, legendLabels)
 

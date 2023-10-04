@@ -2,110 +2,133 @@
 
 # reticulate with keras installation issue: see https://github.com/rstudio/keras/issues/615 answer by apantovic
 
+library(R6)
 library(reticulate)
 library(tfdatasets)
 library(keras)
 
-wkeras <- function(mid_layer_params = NULL, suffix = NULL, epochs=NULL) {
-  if (is.null(mid_layer_params))
-    mid_layer_params <- list(activation = "relu", units = 32)
-  if (is.null(epochs)) epochs <- 30
-  param <- list(mid_layer_params = mid_layer_params, epochs = epochs)
+wkeras <- R6Class(
+  "wkeras",
 
-  if (!missing(suffix) || !is.null(suffix))
-    name <- glue('keras-{suffix}')
-  else
-    name <- 'keras'
-  
-  result <- list(
-    name = name,
-    param = param,
-    fitFunction = wfitKeras
-  )
-  class(result) <- 'wmodel'
-  return(result)
-}
+  public = list(
+
+    epochs = NA,
+    step_epochs = NA,
+    name = 'keras',
+    w = 0,
+    p = NA,
+    model = NULL,
+    batch_size = NA,
+    lambda = NA,
+    nhidden = 0,
+
+    #' @param epoches number of epochs in the initial training phase
+    #' @param step_epoches number of epoths in the text training step
+    initialize = function(epochs = 30, step_epochs=5, batch_size=128, lambda=0.01, nhidden=0) {
+      stopifnot(is.numeric(epochs), length(epochs) == 1)
+      self$epochs <- epochs
+      stopifnot(is.numeric(step_epochs), length(step_epochs) == 1)
+      self$step_epochs <- step_epochs
+      self$batch_size <- batch_size
+      self$lambda <- lambda
+      self$nhidden <- nhidden
+      self$name <- glue('wkeras-{nhidden}')
+    },
+
+    #' @param param for backward compatability
+    fitFunction = function(X, Y, param, w = NULL, verbose = F) {
+
+      # prepare data
+      if (verbose)
+        if (!(missing(w) || is.null(w))) {
+          cat('Fitting weighted keras\n')
+          print(summary(w*length(w)))
+        }
+
+      epochs <- self$step_epochs
+      # init model
+      if (is.na(self$p)) {
+        #
+        self$p <- ncol(X)
+        # init model
+        cat('Initializing model lambda=', self$lambda, '\n')
+        if (self$nhidden == 0)
+          self$model <- keras_model_sequential() %>%
+            layer_dense(units = 1,
+                        activation = "sigmoid",
+                        kernel_regularizer = regularizer_l1_l2(l1 = self$lambda/2, l2 = self$lambda/2),
+                        input_shape = shape(self$p))
+        else
+          self$model <- keras_model_sequential() %>%
+          layer_dense(units = 64,
+                      activation = "relu",
+                      kernel_regularizer = regularizer_l1_l2(l1 = self$lambda/2, l2 = self$lambda/2),
+                      input_shape = shape(self$p)) %>%
+          layer_dense(units = 1,
+                      activation = "sigmoid",
+                      kernel_regularizer = regularizer_l1_l2(l1 = self$lambda/2, l2 = self$lambda/2),
+                      input_shape = shape(64))
+
+        # Training
+        self$model %>% compile(
+          loss = "binary_crossentropy", # loss_binary_crossentropy,
+          optimizer = "adam", # optimizer_adam(learning_rate = 0.001),
+          metrics = c("accuracy"), # , 'binary_accuracy',  binary_crossentropy, binary_accuracy, metric_auc(from_logits = F)
+          weighted_metrics =  c("accuracy")
+        )
+        epochs <- self$epochs
+      }
+      cat('number of epoches', epochs, '\n')
+
+      callbacks <- list(
+        callback_early_stopping(monitor = "val_loss", min_delta = 0, patience = 5, verbose = 1, mode = "auto"))
+      # callback_reduce_lr_on_plateau()
+
+      fitVerbose <- 0
+      if (!(missing(w) || is.null(w))) {
+        history <- self$model %>%
+          fit(
+            x = as_tensor(X),
+            y = as_tensor(Y),
+            sample_weight = w/sum(w)*length(w),
+            epochs = epochs,
+            validation_split = 0.2,
+            verbose = fitVerbose,
+            batch_size = self$batch_size,
+            callbacks = callbacks
+          )
+      } else {
+        history <- self$model %>%
+          fit(
+            x = as_tensor(X),
+            y = as_tensor(Y),
+            epochs = epochs,
+            validation_split = 0.2,
+            verbose = fitVerbose,
+            batch_size = self$batch_size,
+            callbacks = callbacks
+          )
+      }
+      return(self)
+    },
+
+    predictFunction = function(m=NULL, X) {  # TODO - get rid of the first argument, turn all classes to R6
+      d <- as_tibble(X)
+      xFeatures <- glue('X{1:ncol(X)}')
+      names(d) <- xFeatures
+      p <- predict(self$model, as_tensor(d), verbose=0)
+      p <- as.vector(p)
+      return(p)
+    },
 
 
-wfitKeras <- function(X, Y, param, w = NULL, verbose = F) {
-  # todo change the API to formula?
-  # prepare data
-  if (verbose)
-    if (!(missing(w) || is.null(w))) {
-      cat('Fitting weighted keras\n')
-      print(summary(w*length(w)))
+    importanceFunction = function(m=NULL) {
+      return(NULL)
+    },
+
+    printFucntion = function(m=NULL) {
+      print(self$model)
     }
-  d <- as_tibble(cbind(X, Y))
-  xFeatures <- glue('X{1:ncol(X)}')
-  names(d) <- c(xFeatures, 'Y')
-  # spec
-  spec <- feature_spec(d, Y ~ .) %>% 
-    step_numeric_column(
-      all_numeric(),
-      normalizer_fn = scaler_standard()
-    )
-  spec_prep <- fit(spec)
-  # str(spec_prep$dense_features())
-  # Model
-  input <- layer_input_from_dataset(d %>% select(-Y))
-  output <- input %>% 
-    layer_dense_features(dense_features(spec_prep)) %>% 
-    (function(x) {do.call(layer_dense, c(list(x), param$mid_layer_params))}) %>%
-    layer_dropout(0.2) %>%
-    # layer_dense(units = 16, activation = 'relu') %>%
-    # layer_dropout(0.1) %>%
-    layer_dense(units = 1, activation = "sigmoid")  # TODO , kernel_regularizer=regularizer_l2(l=1e-1)
-  model <- keras_model(input, output)
-  # Training
-  model %>% compile(
-    loss = loss_binary_crossentropy, 
-    optimizer = "adam", # optimizer_adam(learning_rate = 0.001),
-    metrics = 'binary_accuracy',  # binary_crossentropy, binary_accuracy, metric_auc(from_logits = F)
-    weighted_metrics =  metric_auc(from_logits = F)
+
   )
-
-  fitVerbose <- 0
-  if (!(missing(w) || is.null(w))) {
-    history <- model %>% 
-      fit(
-        x = d %>% select(-Y),
-        y = d$Y,
-        sample_weight = w,
-        epochs = param$epochs, 
-        validation_split = 0.2,
-        verbose = fitVerbose # , batch_size = 128
-      )
-  } else {
-    history <- model %>% 
-      fit(
-        x = d %>% select(-Y),
-        y = d$Y, 
-        epochs = param$epochs, 
-        validation_split = 0.2,
-        verbose = fitVerbose # , batch_size = 128
-      )
-  }
-  
-  result <- list(model=model, predictFunction=wpredictKeras, importanceFunction=wimportantKeras, param=param)
-  return(result)
-}
-
-
-wpredictKeras <- function(m, X) {
-  d <- as_tibble(X)
-  xFeatures <- glue('X{1:ncol(X)}')
-  names(d) <- xFeatures
-  p <- predict(m, d, verbose=0)
-  p <- as.vector(p)
-  return(p)
-}
-
-
-wimportantKeras <- function(m) {
-  return(NULL)
-}
-
-
-wprintKeras <- function(m) {
-  print(m$model)
-}
+)

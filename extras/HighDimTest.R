@@ -9,10 +9,13 @@ library(LearningWithExternalStats)
 script_dir <- dirname(rstudioapi::getSourceEditorContext()$path)
 setwd(script_dir)
 source('./offset-test.R')
+source('./optimize/kerasWeightOptimizer.R')
+
+testLevel <- 'a'
 
 # Parameters
-nTest <- 10  # Should be >1
-loadCached = T
+
+loadCached <- F
 
 testParams <- list(
   binary = T, # type of covariates
@@ -25,20 +28,42 @@ testParams <- list(
   loadCached = loadCached,  # load or train from scratch
   trainer = wglmnet()  # wXGBoost()
 )
-# testParams[c('p', 'n', 'outcomeOffset')] <- c(2, 2000, -log(2))
-testParams[c('p', 'n', 'outcomeOffset')] <- c(500, 3e5, -log(250))
+
+switch (testLevel,
+  a = {
+    testParams[c('p', 'n', 'outcomeOffset')] <- c(2, 2000, -log(2))
+    nTest <- 2  # Should be >1
+  },
+  b = {
+    testParams[c('p', 'n', 'outcomeOffset')] <- c(100, 10000, -log(5))
+    nTest <- 10  # Should be >1
+  },
+  c = {
+    testParams[c('p', 'n', 'outcomeOffset')] <- c(500, 3e5, -log(250))
+    nTest <- 10  # Should be >1
+  }
+)
+
 
 modelName <- getModelName(testParams)
-outputDir <- file.path('D:/projects/robustness/bench02', modelName)
+outputDir <- file.path('D:/projects/robustness/bench09', modelName)
 dataDir <- file.path('D:/projects/robustness/evaluationData', modelName)
 
-esti  <- createExternalEstimatorSettings(
-  reweightAlgorithm = seTunedWeightOptimizer(outputDir=outputDir),
-  nRepetitions = 15,
-  outputDir = outputDir,
-  maxCores = 15
+
+reweightEg500 <- seTunedWeightOptimizer(outputDir=outputDir, nIter = 500)
+reweightEg5000 <- seTunedWeightOptimizer(outputDir=outputDir, nIter = 5000)
+reweightKerasId <- kerasWeightOptimizer(optimizer = 'adam', nIter = 5000, parameterization = 'id')
+reweightKerasLog <- kerasWeightOptimizer(optimizer = 'adam', nIter = 5000, parameterization = 'log')
+
+# Every item includes: transformation, reweight-algorithm and name
+estimationParams <- list(
+  list('Current flat', reweightEg500, 'C 500'),
+  list('New flat',  reweightEg5000, 'EG N'),
+  list('New flat',  reweightKerasId, 'KerasId N'),
+  list('New flat',  reweightKerasLog, 'KerasLog N'),
+  list('Interaction',  reweightEg5000, 'EG I'),
+  list('Interaction',  reweightKerasId, 'KerasId I'),
+  list('Interaction',  reweightKerasLog, 'KerasLog I')
 )
-estimationParams <- vector(mode = 'list', length = 1)
-estimationParams[[1]] <- esti
 
 proximityAndOffsetTests(testParams, estimationParams, nTest, loadCached, outputDir, dataDir)

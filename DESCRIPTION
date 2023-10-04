@@ -15,7 +15,8 @@ Imports:
     ParallelLogger,
     pROC,
     stats,
-    WeightedROC
+    WeightedROC,
+    R6
 Suggests:
     knitr,
     rmarkdown,

@@ -1,6 +1,7 @@
 #' @importFrom stats sd quantile
 #' @importFrom pROC auc roc
 #' @importFrom WeightedROC WeightedAUC WeightedROC
+#' @importFrom R6 R6Class
 #' @import ParallelLogger
 NULL
 

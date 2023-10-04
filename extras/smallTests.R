@@ -5,6 +5,11 @@ library(glue)
 library(pROC)
 library(glmnet)
 
+script_dir <- dirname(rstudioapi::getSourceEditorContext()$path)
+setwd(script_dir)
+source('./optimize/kerasWeightOptimizer.R')
+
+
 d <- LearningWithExternalStats::binaryAnchorData1
 model1 <- LearningWithExternalStats::binaryAnchorLR1
 
@@ -15,16 +20,31 @@ pInternal <- predict(model1, internalX, type = "response", s = "lambda.1se")[,1]
 internalAUC <- auc(roc(d$internalTest[['Y']], pInternal, direction = "<", quiet = T))
 cat(glue('\nInternal AUC = {format(internalAUC, digits=3)}'), '\n')
 
-dTransformedInt <- computeTable1LikeTransformation(d$internalTest, outcomeBalance=TRUE)
-dTransformedExt <- computeTable1LikeTransformation(d$externalTest, outcomeBalance=TRUE)
+xExternal <- sapply(d$externalTest[xFeatures], as.numeric)
+pExternal <- predict(model1, xExternal, type = "response", s = "lambda.1se")[,1]
+extAuc <- auc(roc(d$externalTest[['Y']], pExternal, quiet = TRUE, direction='<'))
+cat(glue('\nExternal AUC = {format(extAuc, digits=3)}'), '\n')
+
+
+Table1Transform <- reweightTransfrom$new(outcomeCol = 'Y', interactionVars =  glue('X{1:2}'))  # , interactionVars = glue('X{1:2}')
+f <- Table1Transform$getFormula(d$internalTest)
+
+# dTransformedInt <- computeTable1LikeTransformation(d$internalTest, outcomeBalance=TRUE)
+# dTransformedExt <- computeTable1LikeTransformation(d$externalTest, outcomeBalance=TRUE)
+
+dTransformedInt <- model.matrix(f, data = d$internalTest)
+dTransformedExt <- model.matrix(f, data = d$externalTest)
+
+
 muExt <- colMeans(dTransformedExt)
 
 
 externalEstimatorSettings <- createExternalEstimatorSettings(
-  reweightAlgorithm = seTunedWeightOptimizer(maxSuccessMSE = 1e-4), # cvxWeightOptimizer(),
+  reweightAlgorithm =  kerasWeightOptimizer(lr = 0.01, nIter = 1000, maxSuccessMSE = 1e-04),
+  # reweightAlgorithm = seTunedWeightOptimizer(nIter = 5000, maxSuccessMSE = 1e-4), # cvxWeightOptimizer(),  nIter = 10000
   nMaxReweight = 10000,
   nRepetitions = 10,
-  maxCores = 3,
+  maxCores = 1,
   maxWSMD = 0.1
 )
 
@@ -39,7 +59,7 @@ estimatedLRResults1 <- estimateExternalPerformanceFromStatistics(
 estimationLRView <- estimatedLRResults1$estimation
 if (!is.null(estimationLRView)) {
   estimationLRView[, 'value'] <- apply(estimationLRView, 1, function(x) {sprintf('%.3g', x)})
-  print(estimationLRView)
+  # print(estimationLRView)
 } else
 {
   cat('Empty estimation results\n')
@@ -51,21 +71,18 @@ fields <- c(getPreDiagnosticsFieldNames(), getWeightingResultsFieldNames(), getE
 summary <- data.frame(row.names = fields)
 
 expName <- 'Exp.1'
-xExternal <- sapply(d$externalTest[xFeatures], as.numeric)
-pExternal <- predict(model1, xExternal, type = "response", s = "lambda.1se")[,1]
-extAuc <- auc(roc(d$externalTest[['Y']], pExternal, quiet = TRUE, direction='<'))
-cat(glue('\nExternal AUC = {format(extAuc, digits=3)}'), '\n')
 
 summary['External AUC', expName] <- extAuc
 summary['Internal AUC', expName] <- internalAUC
 summary[rownames(estimatedLRResults1$results), expName] <- estimatedLRResults1$results
-write.csv(estimatedLRResults1$results, 'results1.csv')
+# write.csv(estimatedLRResults1$results, 'results1.csv')
+cat('Estimated results', estimatedLRResults1$estimation['AUROC', 'value'], '\n')
 
 
 # Test dropping a feature
 expName <- 'Exp.2'
 cat('mu length =', length(muExt), '\n')
-excludeVars <- c('X3_Table1T_times_y1', 'X3_Table1T_times_y0')
+excludeVars <- c('I(Y):X3', 'X3:I(1 - Y)')
 reducedMu <- muExt[!names(muExt) %in% excludeVars]
 
 cat('Reduced mu length =', length(reducedMu), '\n')
@@ -74,7 +91,7 @@ estimatedLRResults2 <- estimateExternalPerformanceFromStatistics(
   externalStats = reducedMu,
   externalEstimatorSettings = externalEstimatorSettings
 )
-cat(estimatedLRResults2$estimation['AUROC', 'value'], '\n')
+cat('Estimated results with and excluded var from stats', estimatedLRResults2$estimation['AUROC', 'value'], '\n')
 summary[rownames(estimatedLRResults2$results), expName] <- estimatedLRResults2$results
 write.csv(estimatedLRResults2$results, 'results2.csv')
 
@@ -86,6 +103,6 @@ estimatedLRResults3 <- estimateExternalPerformanceFromStatistics(
   externalStats = muExt,
   externalEstimatorSettings = externalEstimatorSettings
 )
-cat(estimatedLRResults3$estimation['AUROC', 'value'], '\n')
+cat('Estimated results with and excluded var from data', estimatedLRResults3$estimation['AUROC', 'value'], '\n')
 summary[rownames(estimatedLRResults3$results), expName] <- estimatedLRResults3$results
 write.csv(estimatedLRResults3$results, 'results3.csv')

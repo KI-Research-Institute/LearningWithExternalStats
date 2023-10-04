@@ -9,7 +9,8 @@ plotHighDimResults <- function(params) {
   k <- length(params$estimationParams)
   legendLabels <- vector(mode = 'list', length = k)
   for (i in 1:k)
-    legendLabels[[i]] <- params$estimationParams[[i]]$shortName
+    legendLabels[[i]] <- params$estimationParams[[i]][[3]]
+  print(legendLabels)
   plotPropoertiesBox(outputDir, testname, legendLabels)
   plotResults(outputDir, testname, legendLabels)
 }

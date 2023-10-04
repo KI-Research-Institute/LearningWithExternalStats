@@ -249,52 +249,6 @@ dualReweightByMeans <- function(Z, mu, lambda, minSd, minW, solver, verbose) {
 }
 
 
-#' @title Compute Table 1 like transformation
-#'
-#' @description
-#'
-#' Compute features and squared numeric feature multiplied by outcome and 1-outcome.
-#'
-#' @param X data frame
-#' @param outcomeBalance boolean specifying if to use outcome in balancing
-#' @param outcomeCol string specifying the name of the outcome column
-#'
-#' @return
-#' A data frame
-#'
-#' @export
-computeTable1LikeTransformation <- function(X, outcomeBalance, outcomeCol='Y') {
-  # Add squares of numeric features
-  is_numeric <- sapply(X, function(x) length(unique(x))>2)  # TODO - consider a more elegant way
-  for (s in names(is_numeric[is_numeric])) {
-    sNew <- paste(s, '_Table1T_squared', sep='')
-    X[[sNew]] <- (X[[s]]**2)
-  }
-  # Convert binary CVXR::Variables to numeric 0-1
-  is_factor <- sapply(X, is.factor)
-  X[is_factor] <- sapply(X[is_factor], as.numeric)
-  X[is_factor] <- X[is_factor] - 1
-  # Add interactions with outcome
-  if (outcomeBalance) {
-    Z = data.frame(row.names = row.names(X))
-    Z[['Y']] <- X[[outcomeCol]]  # TODO decide if to maintain this
-    x_names <- names(X)
-    ext_x <- x_names[x_names != outcomeCol]
-    ext_x_y1 <- paste(ext_x, '_Table1T_times_y1', sep="")
-    for (i in 1:length(ext_x)) {
-      Z[[ext_x_y1[i]]] <- X[[outcomeCol]] * X[[ext_x[i]]]
-    }
-    ext_x_y0 <- paste(ext_x, '_Table1T_times_y0', sep="")
-    for (i in 1:length(ext_x)) {
-      Z[[ext_x_y0[i]]] <- (1-X[[outcomeCol]]) * X[[ext_x[i]]]
-    }
-  } else {
-    Z <- X
-  }
-  return (Z)
-}
-
-
 #' @title create reweight settings
 #'
 #' @param divergence distributional divergence
