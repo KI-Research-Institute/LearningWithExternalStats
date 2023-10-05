@@ -7,7 +7,7 @@
 transformClassifierData(
   d,
   transformType = "Table 1",
-  interactionVar = NULL,
+  interactionVars = NULL,
   outcomeCol = "Y",
   outcomeBalance = outcomeBalance
 )
@@ -17,11 +17,11 @@ transformClassifierData(
 
 \item{transformType}{\code{'Table 1'} or \code{'Interaction'} or \code{'Flat'}}
 
+\item{interactionVars}{interaction variables in case \code{transformType} is \code{'Interaction'}}
+
 \item{outcomeCol}{string specifying the name of the outcome column}
 
 \item{outcomeBalance}{boolean specifying if to use outcome in balancing}
-
-\item{interactionVars}{interaction variables in case \code{transformType} is \code{'Interaction'}}
 }
 \value{
 A data frame

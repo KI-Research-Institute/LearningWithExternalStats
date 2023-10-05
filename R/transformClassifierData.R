@@ -16,13 +16,13 @@
 #'
 #' @export
 transformClassifierData <- function(
-    d, transformType = 'Table 1', interactionVar = NULL, outcomeCol = 'Y', outcomeBalance = outcomeBalance) {
+    d, transformType = 'Table 1', interactionVars = NULL, outcomeCol = 'Y', outcomeBalance = outcomeBalance) {
 
   if (transformType == 'Table 1') {
     dTransformed <- computeTable1LikeTransformation(d, outcomeBalance=TRUE, outcomeCol = outcomeCol)
   } else {
     if (transformType == 'Interaction') {
-      rTransform <- reweightTransfrom$new(outcomeCol = outcomeCol, interactionVars = interactionVar)
+      rTransform <- reweightTransfrom$new(outcomeCol = outcomeCol, interactionVars = interactionVars)
     } else {
       rTransform <- reweightTransfrom$new(outcomeCol = outcomeCol)
     }

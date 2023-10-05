@@ -140,7 +140,6 @@ internalResults <- runPlp(
   )
 # Identify model covariates. These will be used in the estimation algorithm.
 estimationCovariates <- getLRModelCovariates(internalResults)
-print(estimationCovariates)
 ```
 
 Preliminary experiments have shown that using the subset selected by the model for generation of external statistics
@@ -148,6 +147,7 @@ gives better results than using all covariates.
 
 ```{r show results}
 cat(glue('Selected {length(estimationCovariates)} features'), '\n')
+print(estimationCovariates)
 ```
 The external node should receive now the estimation covariates.
 
@@ -358,16 +358,41 @@ To add interactions we replace `computeTable1LikeTransformation` by a configurab
 
 ```{r message=FALSE, warning=FALSE, eval=TRUE}
 ZInt <- transformClassifierData(
-allignedInternal$dataXY[c(estimationCovariates, 'outcome')],
-outcomeCol = 'outcome'
+  allignedInternal$dataXY[c(estimationCovariates, 'outcome')],
+  transformType = 'Interaction',
+  interactionVars = 'drug_era_group_any_time_prior_through__1_days_relative_to_index__Aspirin',
+  outcomeCol = 'outcome'
 )
-#Estimate external performance condition_era_group_any_time_prior_through__1_days_relative_to_index__Peptic_ulcer
+#Estimate external performance 
 internalData <- list(
 z = ZInt,
 p = allignedInternal$prediction$value,
 y = allignedInternal$dataXY[['outcome']]
 )
 
-print(head(ZInt))
-```
+ZExt <- transformClassifierData(
+  externalXY[c(estimationCovariates, 'outcome')],
+  transformType = 'Interaction',
+  interactionVars = 'drug_era_group_any_time_prior_through__1_days_relative_to_index__Aspirin',
+  outcomeCol = 'outcome'
+)
+muExt <- colMeans(ZExt)
 
+estimatedResults <- estimateExternalPerformanceFromStatistics(
+  internalData = internalData,
+  externalStats = muExt,
+  externalEstimatorSettings = externalEstimatorSettings
+)
+
+cat('Estimation statuus', estimatedResults$status, '\n')
+
+if (estimatedResults$status=='Success') {
+  cat('Estimated exteranl performance','\n')
+  estimationView <- estimatedResults$estimation
+  # Format the output:
+  estimationView[, 'value'] <- apply(estimationView, 1, function(x) {sprintf('%.3g', x)})
+  print(estimationView[1:7, ])  # print the 7 first fields
+} else {
+  print(estimatedResults$results)  
+}
+```
