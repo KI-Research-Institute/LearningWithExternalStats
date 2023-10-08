@@ -363,36 +363,8 @@ ZInt <- transformClassifierData(
   interactionVars = 'drug_era_group_any_time_prior_through__1_days_relative_to_index__Aspirin',
   outcomeCol = 'outcome'
 )
-#Estimate external performance 
-internalData <- list(
-z = ZInt,
-p = allignedInternal$prediction$value,
-y = allignedInternal$dataXY[['outcome']]
-)
-
-ZExt <- transformClassifierData(
-  externalXY[c(estimationCovariates, 'outcome')],
-  transformType = 'Interaction',
-  interactionVars = 'drug_era_group_any_time_prior_through__1_days_relative_to_index__Aspirin',
-  outcomeCol = 'outcome'
-)
-muExt <- colMeans(ZExt)
-
-estimatedResults <- estimateExternalPerformanceFromStatistics(
-  internalData = internalData,
-  externalStats = muExt,
-  externalEstimatorSettings = externalEstimatorSettings
-)
-
-cat('Estimation statuus', estimatedResults$status, '\n')
-
-if (estimatedResults$status=='Success') {
-  cat('Estimated exteranl performance','\n')
-  estimationView <- estimatedResults$estimation
-  # Format the output:
-  estimationView[, 'value'] <- apply(estimationView, 1, function(x) {sprintf('%.3g', x)})
-  print(estimationView[1:7, ])  # print the 7 first fields
-} else {
-  print(estimatedResults$results)  
-}
+```
+This gives the following columns:
+```{r message=FALSE, warning=FALSE, eval=TRUE}
+print(colnames(ZInt))
 ```
