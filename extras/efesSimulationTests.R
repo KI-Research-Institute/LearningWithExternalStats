@@ -13,7 +13,6 @@ source('./mlWrappers/wrpart.R')
 # source('./mlWrappers/wkeras.R')
 source('./mlWrappers/wrappedml.R')
 source('./simulations/anchorModelSimulator.R')
-source('./transformByType.R')
 
 
 getDefaultEfesTestParams <- function(outputDir) {
@@ -265,8 +264,8 @@ estimatePerformance <- function(testParams, i, d, pInternal, vars1) {
 
   cat('\n\n--- estimating performance ---\n\n')
 
-  dTransformedInt <- transformByType(transformType, internalK, interactionVar = vars1[1])
-  dTransformedExt <- transformByType(transformType, externalK, interactionVar = vars1[1])
+  dTransformedInt <- transformClassifierData(internalK, transformType, interactionVar = vars1[1])
+  dTransformedExt <- transformClassifierData(externalK, transformType, interactionVar = vars1[1])
 
   print(colnames(dTransformedInt))
   muExt <- colMeans(dTransformedExt)
