@@ -43,3 +43,8 @@ vignettes/*.pdf
 inst/doc
 /doc/
 /Meta/
+
+# Data files
+/extras/benchmarks/*.txt
+/extras/*.txt
+/extras/*.csv
