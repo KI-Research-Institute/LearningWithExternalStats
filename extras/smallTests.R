@@ -26,21 +26,30 @@ extAuc <- auc(roc(d$externalTest[['Y']], pExternal, quiet = TRUE, direction='<')
 cat(glue('\nExternal AUC = {format(extAuc, digits=3)}'), '\n')
 
 
-Table1Transform <- reweightTransfrom$new(outcomeCol = 'Y', interactionVars =  glue('X{1:2}'))  # , interactionVars = glue('X{1:2}')
-f <- Table1Transform$getFormula(d$internalTest)
+# Table1Transform <- reweightTransfrom$new(outcomeCol = 'Y', interactionVars =  glue('X{1:2}'))  # , interactionVars = glue('X{1:2}')
+# f <- Table1Transform$getFormula(d$internalTest)
 
 # dTransformedInt <- computeTable1LikeTransformation(d$internalTest, outcomeBalance=TRUE)
 # dTransformedExt <- computeTable1LikeTransformation(d$externalTest, outcomeBalance=TRUE)
 
-dTransformedInt <- model.matrix(f, data = d$internalTest)
-dTransformedExt <- model.matrix(f, data = d$externalTest)
-
+dTransformedInt <-transformClassifierData(
+  d$internalTest,
+  transformType = 'Interaction',
+  interactionVars = glue('X{1:2}'),
+  outcomeCol = 'Y'
+)
+dTransformedExt <- transformClassifierData(
+  d$externalTest,
+  transformType = 'Interaction',
+  interactionVars = glue('X{1:2}'),
+  outcomeCol = 'Y'
+)
 
 muExt <- colMeans(dTransformedExt)
 
 
 externalEstimatorSettings <- createExternalEstimatorSettings(
-  reweightAlgorithm =  kerasWeightOptimizer(lr = 0.01, nIter = 1000, maxSuccessMSE = 1e-04),
+  reweightAlgorithm =  kerasWeightOptimizer(optimizer = 'adam', nIter = 10000, parameterization = 'id'),
   # reweightAlgorithm = seTunedWeightOptimizer(nIter = 5000, maxSuccessMSE = 1e-4), # cvxWeightOptimizer(),  nIter = 10000
   nMaxReweight = 10000,
   nRepetitions = 10,
