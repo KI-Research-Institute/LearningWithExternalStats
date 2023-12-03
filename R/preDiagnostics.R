@@ -70,6 +70,7 @@ preDiagnostics <- function(z, mu, maxDiff, npMinRatio = 4, maxSubset=20000) {
   nInput <- nrow(z)
   pInput <- ncol(z)
 
+  # Verify overlapping names between z columns and mu
   overlapLog <- checkVariableNamesOverlap(z, mu)
   structuredLog[names(overlapLog), 'value'] = unlist(overlapLog)
   status <- overlapLog$preDiagnosisStatus
@@ -79,6 +80,10 @@ preDiagnostics <- function(z, mu, maxDiff, npMinRatio = 4, maxSubset=20000) {
     return(list(structuredLog=structuredLog, status='Failure'))
   }
 
+  # Once we verified names overlap, we align them
+  mu <- mu[colnames(z)]
+
+  # Check that there are no Na entries in z
   structuredLog['naInZ', 'value'] <- any(is.na(z))
   if (structuredLog['naInZ', 'value']) {
     ParallelLogger::logError("Data set has na entries, cannot reweight")
