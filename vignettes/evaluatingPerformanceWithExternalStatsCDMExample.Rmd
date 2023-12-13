@@ -229,7 +229,7 @@ used for logging and `maxCores` are the maximum cores used in parallel for repea
 
 ```{r message=FALSE, warning=FALSE, eval=TRUE, results='hide'}
 externalEstimatorSettings  <- createExternalEstimatorSettings(
-  reweightAlgorithm = seTunedWeightOptimizer(),
+  reweightAlgorithm = seTunedWeightOptimizer(outcomeCol = 'outcome'),
   nRepetitions = 100,
   outputDir = getwd(),
   maxCores = 15

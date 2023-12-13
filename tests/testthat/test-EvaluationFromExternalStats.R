@@ -30,7 +30,7 @@ test_that("estimated AUC is in range", {
   pExternal <- predictGLM(d$externalTest, model1)
   externalAUC <- as.numeric(auc(roc(d$externalTest[['Y']], pExternal, direction = "<", quiet = T)))
 
-  wOptimizer = seTunedWeightOptimizer(maxSuccessMSE=5e-4)
+  wOptimizer = seTunedWeightOptimizer(outcomeCol = 'Y', maxSuccessMSE=5e-4)
   estimatedAUC <- estimateExternalAUCWithInternalData(dTransformedInt, pInternal, muExt, wOptimizer)
   expect_equal(estimatedAUC, externalAUC, tolerance = 0.07)
 
@@ -57,7 +57,7 @@ test_that("algorithm detects missing stats", {
   pExternal <- predictGLM(d$externalTest, model1)
   externalAUC <- as.numeric(auc(roc(d$externalTest[['Y']], pExternal, direction = "<", quiet = T)))
 
-  wOptimizer <- seTunedWeightOptimizer()
+  wOptimizer <- seTunedWeightOptimizer(outcomeCol = 'Y')
   estimatedAUC <- estimateExternalAUCWithInternalData(dTransformedInt, pInternal, reducedMu, wOptimizer)
   expect_null(estimatedAUC)
 
@@ -80,7 +80,7 @@ test_that("algorithm detects missing internal features", {
   pExternal <- predictGLM(d$externalTest, model1)
   externalAUC <- as.numeric(auc(roc(d$externalTest[['Y']], pExternal, direction = "<", quiet = T)))
 
-  wOptimizer <- seTunedWeightOptimizer()
+  wOptimizer <- seTunedWeightOptimizer(outcomeCol = 'Y')
   estimatedAUC <- estimateExternalAUCWithInternalData(zReduced, pInternal, muExt, wOptimizer)
   expect_null(estimatedAUC)
 })
@@ -122,7 +122,7 @@ test_that("estimated AUC is in range with binary data", {
   pExternal <- predictGLM(d$externalTest, model1)
   externalAUC <- as.numeric(auc(roc(d$externalTest[['Y']], pExternal, direction = "<", quiet = T)))
 
-  wOptimizer = seTunedWeightOptimizer()
+  wOptimizer <- seTunedWeightOptimizer(outcomeCol = 'Y')
   estimatedAUC <- estimateExternalAUCWithInternalData(dTransformedInt, pInternal, muExt, wOptimizer)
   expect_equal(estimatedAUC, externalAUC, tolerance = 0.05)
 
@@ -143,11 +143,11 @@ test_that("package caputures the status", {
   pExternal <- predictGLM(d$externalTest, model1)
   externalAUC <- as.numeric(auc(roc(d$externalTest[['Y']], pExternal, direction = "<", quiet = T)))
 
-  wOptimizer = seTunedWeightOptimizer(maxSuccessMSE=5e-4)
+  wOptimizer <- seTunedWeightOptimizer(outcomeCol = 'Y', maxSuccessMSE=5e-4)
   estimation1 <- estimatePerformanceWithInternalData(dTransformedInt, pInternal, muExt, wOptimizer)
   expect_equal(estimation1$status=='Success', T)
 
-  wOptimizer = seTunedWeightOptimizer(nTuneIter = 2, nIter = 5, maxSuccessMSE=0.001)
+  wOptimizer = seTunedWeightOptimizer(outcomeCol = 'Y', nTuneIter = 2, nIter = 5, maxSuccessMSE=0.001)
   estimation2 <- estimatePerformanceWithInternalData(dTransformedInt, pInternal, muExt, wOptimizer)
   expect_equal(estimation2$status=='Success', F)
 
