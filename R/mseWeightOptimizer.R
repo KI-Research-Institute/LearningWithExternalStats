@@ -1,6 +1,7 @@
 #' An optimizer that uses minimum squared error criterion with initial tuning of the
 #' base learning rate.
 #'
+#' @param outcomeCol name of outcome column
 #' @param alphas a set of candidate baseline rates
 #' @param minSd minimum standard deviation of feature
 #' @param w0 initial weights vector, if NULL the weights will be initialized to uniform
@@ -18,10 +19,12 @@
 #'
 #' @export
 seTunedWeightOptimizer <- function(
+    outcomeCol,
     alphas = c(0.01, 0.03, 0.1, 0.3, 0.5), minSd=1e-4, w0 = NULL,  nTuneIter=50, nIter=2000, outputDir=NULL,
     absTol=1e-8, momentumC=0.9, approxUpdate=F, absMaxUnivariateTol=1e-9, experimental=F, maxSuccessMSE=1e-5)
 {
   l <- list(
+    outcomeCol = outcomeCol,
     shortName = 'W-MSE',
     alphas = alphas,
     minSd = minSd,
@@ -103,8 +106,10 @@ optimizeSEWeightsTuned <- function(wOptimizer, Z, mu)
     r <- cOptimizer$optimize(cOptimizer, Z, mu)
     gc()
     totalIter <- totalIter + nrow(r$log)
-    if (is.na(r$err))
+    if (is.null(r$err) || is.null(r$maxAbsErr) || is.na(r$err) || is.na(r$maxAbsErr)) {
+      ParallelLogger::logInfo(glue('No results for alpha={cOptimizer$alpha}, skipping'))
       break
+    }
     if ((r$err < wOptimizer$absTol) || (r$maxAbsErr < wOptimizer$absMaxUnivariateTol)) {
       r$totalIter <- totalIter
       return(r)
@@ -175,7 +180,7 @@ optimizeSEWeights <- function(wOptimizer, Z, mu) {
   alpha <- wOptimizer$alpha
   n <- nrow(Z)
   m <- ncol(Z)
-  Y <- Z[ ,'Y']
+  Y <- Z[ ,wOptimizer$outcomeCol]
   momentumC <- wOptimizer$momentumC
   v <- rep(0, n)  # momentum velocity
 
@@ -194,8 +199,8 @@ optimizeSEWeights <- function(wOptimizer, Z, mu) {
   idx0 <- Y==0
   n1 <- sum(idx1)
   n0 <- sum(idx0)
-  w[idx1] <- (w[idx1]/sum(w[idx1])) * mu['Y']  # TODO this relies on an assmptin the mu was not rescaled
-  w[idx0] <- (w[idx0]/sum(w[idx0])) * (1-mu['Y'])
+  w[idx1] <- (w[idx1]/sum(w[idx1])) * mu[wOptimizer$outcomeCol]  # TODO this relies on an assmptin the mu was not rescaled
+  w[idx0] <- (w[idx0]/sum(w[idx0])) * (1-mu[wOptimizer$outcomeCol])
   # ParallelLogger::logInfo(glue('Using initial w: sum={sum(w)}, sd={sd(w)}, n0- = {sum(w<=0)}'))
   # First iteration information
   muHat <- t(Z) %*% w  # estimated means

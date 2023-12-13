@@ -32,7 +32,7 @@ outputDir <- file.path('D:/projects/robustness/bench01', modelName)
 dataDir <- file.path('D:/projects/robustness/evaluationData', modelName)
 
 esti  <- createExternalEstimatorSettings(
-  reweightAlgorithm = seTunedWeightOptimizer(outputDir=outputDir),
+  reweightAlgorithm = seTunedWeightOptimizer(outcomeCol = 'Y', outputDir=outputDir),
   nRepetitions = 15,
   outputDir = outputDir,
   maxCores = 15

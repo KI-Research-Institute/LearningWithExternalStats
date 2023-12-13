@@ -14,7 +14,7 @@ source('./plotEfesSimulationResults.R')
 
 
 getModelName <- function(p) {
-  return(glue('p{p$p}-n{p$n}-b{p$binary}-o{exp(-p$outcomeOffset)}-fX{p$sigma_B_Y_X_factor}-fXA{p$sigma_B_Y_XA_factor}-e{p$envOffset}'))
+  return(glue('p{p$p}-n{p$n}-b{p$n_binary}-o{exp(-p$outcomeOffset)}-fX{p$sigma_B_Y_X_factor}-fXA{p$sigma_B_Y_XA_factor}-e{p$envOffset}'))
 }
 
 

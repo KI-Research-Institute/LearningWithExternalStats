@@ -24,8 +24,8 @@ library(ggplot2)
 script_dir <- dirname(rstudioapi::getSourceEditorContext()$path)
 setwd(script_dir)
 incDir <- '..'
-# workDir <- 'D:/projects/robustness/age-gender'
-workDir <- 'C:/localdev/projects/robustness/age-gender'
+workDir <- 'D:/projects/robustness/age-gender'
+# workDir <- 'C:/localdev/projects/robustness/age-gender'
 
 source(file.path(incDir, 'mlWrappers', 'wglmnet.R'))
 source(file.path(incDir, 'mlWrappers', 'wxgboost.R'))
@@ -41,8 +41,8 @@ nMaxTrainSample <- 5000  # 50000
 nr <- 2  # number of repetitions per configuration (5)
 
 outputDir <- file.path(workDir, 'output')
-reweightEg500 <- seTunedWeightOptimizer(outputDir=outputDir, nIter = 500)
-reweightEg2000 <- seTunedWeightOptimizer(outputDir=outputDir, nIter = 2000)
+reweightEg500 <- seTunedWeightOptimizer(outcomeCol = 'Y', outputDir=outputDir, nIter = 500)
+reweightEg2000 <- seTunedWeightOptimizer(outcomeCol = 'Y', outputDir=outputDir, nIter = 2000)
 reweightAdamId <- kerasWeightOptimizer(optimizer = 'adam', nIter = 10000, parameterization = 'id')
 reweightAdamLog <- kerasWeightOptimizer(optimizer = 'adam', nIter = 10000, parameterization = 'log')
 reweightSGDId <- kerasWeightOptimizer(optimizer = 'sgd', nIter = 10000, parameterization = 'id')

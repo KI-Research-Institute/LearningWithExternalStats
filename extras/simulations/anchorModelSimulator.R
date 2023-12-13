@@ -9,7 +9,7 @@ getDefaultModelHyperParams <- function(
     p=500, sigma_B_X_AH=0, outcomeOffset=0, sigma_B_Y_X_factor=4, sigma_B_Y_XA_factor=4) {
   hyperParams = list(
     p = p,
-    binary = F,
+    n_binary = 0,
     sigma_M_H = 0.2,
     sigma_M_X = 0.2,  # std of M_X, coefficient of the influence of A on X
     sigma_M_Y = 0.2,
@@ -60,8 +60,9 @@ modelParams <- function(hyperParams) {
 
     outcomeOffset = hyperParams$outcomeOffset,
 
-    binary = hyperParams$binary,
-    freqs = rbeta(hyperParams$p, hyperParams$shape1, hyperParams$shape2)  # in case of binary features frequencies are taken from a beta distribution
+    n_binary = hyperParams$n_binary,
+    # in case of binary features frequencies are taken from a beta distribution
+    freqs = rbeta(hyperParams$p, hyperParams$shape1, hyperParams$shape2)
   )
   class(params) <- 'AnchorModelParams'
   return(params)
@@ -88,10 +89,11 @@ sampleModel <- function(m, n)
 
   e_X = matrix( rnorm(n*p,mean=0,sd=1), n, p) %*% m$CeX
   X <- m$A * rep(1, n) %*% t(m$M_X) + H %*% m$B_X_H + m$A * H %*% m$B_X_AH  + e_X  #
-  if (m$binary) {
-    for (i in 1:ncol(X)) {
-      p <- pnorm(X[, i], mean(X[, i]) ,sd(X[, i]))
-      X[, i] <- as.numeric(p < m$freqs[i])
+  if (m$n_binary>0) {
+    n_binary <- min(m$n_binary, p)
+    for (i in (p-n_binary+1):p) {
+      probHiddenXi <- pnorm(X[, i], mean(X[, i]) ,sd(X[, i]))
+      X[, i] <- as.numeric(probHiddenXi < m$freqs[i])
     }
   }
   colnames(X) <- xFeatures
@@ -109,7 +111,7 @@ generateSimulatedData <- function(testParams) {
   hyperParams = getDefaultModelHyperParams(
     p=testParams$p, outcomeOffset = testParams$outcomeOffset, sigma_B_X_AH = testParams$sigma_B_X_AH,
     sigma_B_Y_X_factor = testParams$sigma_B_Y_X_factor, sigma_B_Y_XA_factor = testParams$sigma_B_Y_XA_factor)
-  hyperParams$binary <- testParams$binary
+  hyperParams$n_binary <- testParams$n_binary
   params <- modelParams(hyperParams)
   params$A <- 0
   internalTrain <- sampleModel(params, testParams$n)

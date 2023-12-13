@@ -48,6 +48,7 @@ minAlpha <- 0.1
 maxAlpha <- 10
 nAlphas <- 5
 wOptimizer <- seTunedWeightOptimizer(
+  outcomeCol = 'Y',
   nIter = 1000,
   alphas = minAlpha*exp(log(maxAlpha/minAlpha)*(0:nAlphas)/nAlphas),
   improveTh = 1,

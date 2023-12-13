@@ -44,8 +44,8 @@ getGeneralizationTestsParams <- function(outputDir) {
     esti$shortName <- glue('Th{log10(thresholds[i])}m{esti$reweightAlgorithm$momentumC}')
     esti$reweightAlgorithm <-
       seTunedWeightOptimizer(
-        alphas = alphas, outputDir=outputDir, improveTh = thresholds[i], maxErr = 1, nIter = 500, nTuneIter=50,
-        momentumC = 0.9)
+        outcomeCol = 'Y', alphas = alphas, outputDir=outputDir, improveTh = thresholds[i], maxErr = 1, nIter = 500,
+        nTuneIter=50, momentumC = 0.9)
     estimationParams[[3*i-2]] <- esti
     esti$reweightAlgorithm$momentumC <- 0.8
     esti$shortName <- glue('Th{log10(thresholds[i])}m{esti$reweightAlgorithm$momentumC}')

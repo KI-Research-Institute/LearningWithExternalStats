@@ -50,8 +50,8 @@ wkeras <- R6Class(
       if (is.na(self$p)) {
         #
         self$p <- ncol(X)
+        ParallelLogger::logInfo(glue('Intializing keras p = {self$p}, lambda = {self$lambda}'))
         # init model
-        cat('Initializing model lambda=', self$lambda, '\n')
         if (self$nhidden == 0)
           self$model <- keras_model_sequential() %>%
             layer_dense(units = 1,
@@ -78,7 +78,6 @@ wkeras <- R6Class(
         )
         epochs <- self$epochs
       }
-      cat('number of epoches', epochs, '\n')
 
       callbacks <- list(
         callback_early_stopping(monitor = "val_loss", min_delta = 0, patience = 5, verbose = 1, mode = "auto"))

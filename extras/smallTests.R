@@ -50,7 +50,7 @@ muExt <- colMeans(dTransformedExt)
 
 externalEstimatorSettings <- createExternalEstimatorSettings(
   reweightAlgorithm =  kerasWeightOptimizer(optimizer = 'adam', nIter = 10000, parameterization = 'id'),
-  # reweightAlgorithm = seTunedWeightOptimizer(nIter = 5000, maxSuccessMSE = 1e-4), # cvxWeightOptimizer(),  nIter = 10000
+  # reweightAlgorithm = seTunedWeightOptimizer(outcomeCol = 'Y', nIter = 5000, maxSuccessMSE = 1e-4), # cvxWeightOptimizer(),  nIter = 10000
   nMaxReweight = 10000,
   nRepetitions = 10,
   maxCores = 1,

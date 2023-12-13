@@ -38,14 +38,17 @@ getGeneralizationTestsParams <- function(outputDir) {
   esti$shortName <- 'Baseline'
   esti$reweightAlgorithm <-
     seTunedWeightOptimizer(
-      alphas = alphas, outputDir=outputDir, improveTh = threshold, maxErr = 1, nIter = 500, nTuneIter=25)
+      outcomeCol = 'Y', alphas = alphas, outputDir=outputDir, improveTh = threshold, maxErr = 1, nIter = 500,
+      nTuneIter=25)
   estimationParams[[1]] <- esti
   esti <- cvxAlg
   esti$shortName <- 'Warm 10/100'
   esti$reweightAlgorithm <- seTunedWeightOptimizer(
-    alphas = alphas, outputDir=outputDir, improveTh = threshold, maxErr = 1, nIter = 500, nTuneIter=25)
+    outcomeCol = 'Y', alphas = alphas, outputDir=outputDir, improveTh = threshold, maxErr = 1, nIter = 500,
+    nTuneIter=25)
   esti$warmStartAlgorithm <- seTunedWeightOptimizer(
-    alphas = alphas, outputDir=outputDir, improveTh = threshold, maxErr = 1, nIter = 100, nTuneIter=5)
+    outcomeCol = 'Y', alphas = alphas, outputDir=outputDir, improveTh = threshold, maxErr = 1, nIter = 100,
+    nTuneIter=5)
   estimationParams[[2]] <- esti
 
   minW <- 0  # minimum weight

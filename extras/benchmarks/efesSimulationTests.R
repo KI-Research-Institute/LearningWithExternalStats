@@ -7,12 +7,11 @@ library(glue)
 library(glmnet)
 library(pROC)
 
-source('./mlWrappers/wglmnet.R')
-source('./mlWrappers/wxgboost.R')
-source('./mlWrappers/wrpart.R')
-# source('./mlWrappers/wkeras.R')
-source('./mlWrappers/wrappedml.R')
-source('./simulations/anchorModelSimulator.R')
+source('../mlWrappers/wglmnet.R')
+source('../mlWrappers/wxgboost.R')
+source('../mlWrappers/wkeras.R')
+source('../mlWrappers/wrappedml.R')
+source('../simulations/anchorModelSimulator.R')
 
 
 getDefaultEfesTestParams <- function(outputDir) {
@@ -57,7 +56,7 @@ getDefaultEfesTestParams <- function(outputDir) {
   est1$nMaxReweight <- nMaxReweight
   est1$reweightAlgorithm <-
     seTunedWeightOptimizer(
-      alphas = alphas, outputDir=outputDir, improveTh = 1e-4, maxErr = 1, nIter = 200, nTuneIter=20)
+      outcomeCol = 'Y', alphas = alphas, outputDir=outputDir, improveTh = 1e-4, maxErr = 1, nIter = 200, nTuneIter=20)
 
   # 2.
   est2 <- cvxAlg
@@ -66,17 +65,18 @@ getDefaultEfesTestParams <- function(outputDir) {
   est2$nMaxReweight <- nMaxReweight
   est2$warmStartAlgorithm <-
     seTunedWeightOptimizer(
-      alphas = alphas, outputDir=outputDir, improveTh = 1e-4, maxErr = 1, nIter = 40, nTuneIter=4)
+      outcomeCol = 'Y', alphas = alphas, outputDir=outputDir, improveTh = 1e-4, maxErr = 1, nIter = 40, nTuneIter=4)
   est2$reweightAlgorithm <-
     seTunedWeightOptimizer(
-      alphas = alphas, outputDir=outputDir, improveTh = 1e-4, maxErr = 1, nIter = 200, nTuneIter=20)
+      outcomeCol = 'Y', alphas = alphas, outputDir=outputDir, improveTh = 1e-4, maxErr = 1, nIter = 200, nTuneIter=20)
   # 3.
   est3 <- cvxAlg
   est3$nRepetitions = nrep
   est3$shortName <- 'W-MSE many iters'
   est3$nMaxReweight <- nMaxReweight
   est3$reweightAlgorithm <-
-    seTunedWeightOptimizer(alphas = alphas, outputDir=outputDir, improveTh = 1e-4, maxErr = 1, nIter = 500, nTuneIter=50)
+    seTunedWeightOptimizer(
+      outcomeCol = 'Y', alphas = alphas, outputDir=outputDir, improveTh = 1e-4, maxErr = 1, nIter = 500, nTuneIter=50)
 
   # 4.
   est4 <- cvxAlg
@@ -85,11 +85,12 @@ getDefaultEfesTestParams <- function(outputDir) {
   est4$nMaxReweight <- nMaxReweight
   est4$warmStartAlgorithm <-
     seTunedWeightOptimizer(
-      alphas = alphas, outputDir=outputDir, improveTh = 1e-4, maxErr = 1, nIter = 40, nTuneIter=4)
+      outcomeCol = 'Y', alphas = alphas, outputDir=outputDir, improveTh = 1e-4, maxErr = 1, nIter = 40, nTuneIter=4)
     # sgdTunedWeightOptimizer(outputDir=outputDir, epsilon0s=epsilon0s, batchSize = 1000, polyBeta = 1)
   est4$reweightAlgorithm <-
     seTunedWeightOptimizer(
-      alphas = alphas, outputDir=outputDir, improveTh = 1e-4, maxErr = 1, nIter = 500, nTuneIter=50)
+      outcomeCol = 'Y', outcomeCol = 'Y', alphas = alphas, outputDir=outputDir, improveTh = 1e-4, maxErr = 1,
+      nIter = 500, nTuneIter=50)
 
 
   minW <- 0  # minimum weight
@@ -148,7 +149,7 @@ testSimulatedData <- function(testParams, testNum) {
     # Train a model
     xFeatures <- colnames(d$internalTest)[1:(ncol(d$internalTest)-1)]
     cat('Generated simulated data, with the following means:\n')
-    print(sort(colMeans(d$internalTest))[floor((0:10)/10*(testParams$p-1)+1)])
+    print(sort(colMeans(d$internalTest))[1:min(testParams$p, 10)])
     trainingStartTime <- Sys.time()
     #model1 <- cv.glmnet(sapply(d$internalTrain[xFeatures], as.numeric), d$internalTrain[['Y']],
     #                    family = "binomial", type.measure = "auc", alpha = 0.5)
@@ -281,7 +282,7 @@ estimatePerformance <- function(testParams, i, d, pInternal, vars1) {
   }
 
   estimatorSettings  <- createExternalEstimatorSettings(
-    reweightAlgorithm = estimationParams[[2]], nRepetitions = 1, outputDir = outputDir, maxCores = 1)
+    reweightAlgorithm = estimationParams[[2]], nRepetitions = 15, outputDir = outputDir, maxCores = 1)
 
   res <- estimateExternalPerformanceFromStatistics(
     internalData = internalData,
