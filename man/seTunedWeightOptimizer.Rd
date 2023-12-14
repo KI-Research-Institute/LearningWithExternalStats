@@ -6,6 +6,7 @@
 base learning rate.}
 \usage{
 seTunedWeightOptimizer(
+  outcomeCol,
   alphas = c(0.01, 0.03, 0.1, 0.3, 0.5),
   minSd = 1e-04,
   w0 = NULL,
@@ -21,6 +22,8 @@ seTunedWeightOptimizer(
 )
 }
 \arguments{
+\item{outcomeCol}{name of outcome column}
+
 \item{alphas}{a set of candidate baseline rates}
 
 \item{minSd}{minimum standard deviation of feature}

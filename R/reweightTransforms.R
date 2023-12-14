@@ -34,21 +34,25 @@ reweightTransfrom <- R6::R6Class(
 
   public = list(
 
-    # TODO consider adding a flag of outcomeBalance,
+    # TODO consider adding a flag of outcomeBalance, conseider deprecating old interaction formula version
     outcomeCol = NA,
     interactionVars = NA,
+    ver = 1,
 
     #' @param outcomeCol outcome column name
     #' @param interactionVars names of interaction variables (NULL, character or character vector)
+    #' @param ver version of interaction formula. The most updated is 1
     #'
-    initialize = function(outcomeCol = 'Y', interactionVars = NULL) {
+    initialize = function(outcomeCol = 'Y', interactionVars = NULL, ver=1) {
       self$outcomeCol <- outcomeCol
       self$interactionVars <- interactionVars
+      self$ver <- ver
     },
 
     #' @param X a data frame in numeric format
     getFormula = function(X) {
 
+      xTerms <- glue('(. - {self$outcomeCol})')
       # Initialize the formula with flat terms, in case there are variables with >2 values we add their squares
       gt2Values <- sapply(X, function(x) length(unique(x)) > 2)
       gt2Values <- gt2Values & (colnames(X) != self$outcomeCol)  # Remove outcome from squared features
@@ -57,19 +61,32 @@ reweightTransfrom <- R6::R6Class(
         singleVarTerms <- glue('(. + {quadTerms} - {self$outcomeCol})')
       }
       else
-        singleVarTerms <- glue('(. - {self$outcomeCol})')
+        singleVarTerms <- xTerms
       Table1Terms <- glue('I({self$outcomeCol}):{singleVarTerms}+I(1-{self$outcomeCol}):{singleVarTerms}')
       fs <- glue('~ -1 + {self$outcomeCol} + {Table1Terms}')
 
       # Add interaction if given
       if (!is.null(self$interactionVars)) {
-        interactionVarsTerm <- paste(self$interactionVars, collapse = ' + ')
-        if (length(self$interactionVars) > 1)
-          interactionVarsTerm <- glue("({interactionVarsTerm})")
-        fs <- glue('{fs} + ({Table1Terms}):{interactionVarsTerm}')
+        if (self$ver == 1) {
+          xInteraction <- glue('(. - {self$outcomeCol} - {self$interactionVars[1]}):{self$interactionVars[1]}')
+          if (length(self$interactionVars)>1) {
+            for (i in 2:length(interactionVars)) {
+              xi <- glue('(. - {self$outcomeCol} - {self$interactionVars[i]}):{self$interactionVars[i]}')
+              xInteraction <- glue('{xInteraction} + {xi}')
+            }
+            xInteraction <- glue('({xInteration})')
+          }
+          fs <- glue('{fs} + I({self$outcomeCol}):{xInteraction}+I(1-{self$outcomeCol}):{xInteraction}')
+        } else {
+          interactionVarsTerm <- paste(self$interactionVars, collapse = ' + ')
+          if (length(self$interactionVars) > 1)
+            interactionVarsTerm <- glue("({interactionVarsTerm})")
+          fs <- glue('{fs} + ({Table1Terms}):{interactionVarsTerm}')
+        }
       }
       f <- as.formula(fs)
       return(f)
+
     }
 
   )

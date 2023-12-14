@@ -9,7 +9,7 @@ transformClassifierData(
   transformType = "Table 1",
   interactionVars = NULL,
   outcomeCol = "Y",
-  outcomeBalance = outcomeBalance
+  outcomeBalance = TRUE
 )
 }
 \arguments{

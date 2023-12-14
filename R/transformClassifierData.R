@@ -21,11 +21,12 @@ transformClassifierData <- function(
   if (transformType == 'Table 1') {
     dTransformed <- computeTable1LikeTransformation(d, outcomeBalance=outcomeBalance, outcomeCol = outcomeCol)
   } else {
-    if (transformType == 'Interaction') {
-      rTransform <- reweightTransfrom$new(outcomeCol = outcomeCol, interactionVars = interactionVars)
-    } else {
-      rTransform <- reweightTransfrom$new(outcomeCol = outcomeCol)
-    }
+    rTransform <- switch(
+      transformType,
+      Interaction = reweightTransfrom$new(outcomeCol = outcomeCol, interactionVars = interactionVars),
+      "Interaction v0" = reweightTransfrom$new(outcomeCol = outcomeCol, interactionVars = interactionVars, ver=0),
+      reweightTransfrom$new(outcomeCol = outcomeCol)  # Default
+    )
     cat('\n', transformType, 'formula:\n')
     f <- rTransform$getFormula(d)
     print(f)

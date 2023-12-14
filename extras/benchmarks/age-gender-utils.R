@@ -18,7 +18,7 @@ sampleAgeGender <- function(df, oColName, oValue, oSkew = NULL) {
 
   clinicalRows <- rownames(df)[!(rownames(df) %in% c(genderName, 'n', '%', ageRows))]
   cat('n clinical features', length(clinicalRows), '\n')
-  
+
   nAge <- length(ageRows)
 
   skewVec <- data.frame(rep(1, length(ageRows) + length(clinicalRows)))
@@ -31,10 +31,10 @@ sampleAgeGender <- function(df, oColName, oValue, oSkew = NULL) {
     skewVec[inputSkewClinicalFields, 1] <- oSkew[inputSkewClinicalFields, 1]
   }
   cat('skews' ,skewVec[,1], '\n')
-  
+
   # Sample gender column
   gender <- rbinom(n, 1, maleFreq)
-  
+
   # Sample age columns given gender
   ageGroupIndicators <- matrix(nrow = n, ncol = length(agesFreqs))
   colnames(ageGroupIndicators) <- ageRows
@@ -49,7 +49,7 @@ sampleAgeGender <- function(df, oColName, oValue, oSkew = NULL) {
     ageGroupIndicators[gender == 1, ] <- t(rmultinom(nGender1, 1, probs1))
 
   Y <- rep(oValue, n)
-  
+
   # Sample other columns if exist given gender
   if (length(clinicalRows) == 0) {
     d <- data.frame(cbind(gender, ageGroupIndicators[ ,1:(nAge-1)], Y))
@@ -89,9 +89,9 @@ sampleAgeGenderOutcome <- function(df, dbName, oSkew = NULL) {
 #'
 #'
 testSingleAgeGenderOutcome <- function(
-    table1s, intDbName, extDbName, reweightConfigs, 
-    nMaxTrainSample = 50000, trainer = wglmnet(), skew = NULL) {
-  
+    table1s, intDbName, extDbName, reweightConfigs,
+    nMaxTrainSample = 50000, trainer = wglmnet(), skew = NULL, nRepetitions=10, maxCores=10, outputDir = getwd()) {
+
   dTrain <- sampleAgeGenderOutcome(table1s, intDbName)  # Assuming no skew in train set
   nTrainSample <- min(nMaxTrainSample, nrow(dTrain))
   cat('Downsampling from', nrow(dTrain), ' to ', nTrainSample, '\n')
@@ -105,42 +105,42 @@ testSingleAgeGenderOutcome <- function(
   cat('p test Y', mean(dTest[['Y']]), '\n')
   dExt <- sampleAgeGenderOutcome(table1s, extDbName, skew)
   cat('p ext Y', mean(dExt[['Y']]), '\n')
-  
+
   phatInt <- wpredict(m, as.matrix(dTest[xFeatures]))
   print(summary(phatInt))
   aucTest <- pROC::auc(as.factor(dTest[['Y']]), phatInt, direction="<", quiet=TRUE)
   cat('Internal AUROC', aucTest, '\n')
-  
+
   phatExt <- wpredict(m, as.matrix(dExt[xFeatures]))
   cat('External predictions\n')
   print(summary(phatExt))
   aucExt <- pROC::auc(as.factor(dExt[['Y']]), phatExt, direction="<", quiet=TRUE)
   cat('External AUROC', aucExt, '\n')
-  
+
   realResults <- list('Int AUROC' = aucTest, 'Ext AUROC' = aucExt)
 
   estimatedResults <- vector(mode = 'list', length = length(reweightConfigs))
-  
+
   for (paramIdx in 1:length(reweightConfigs)) {
-    
+
     cfg <- reweightConfigs[[paramIdx]]
-    
-    cat('--- Transform type', cfg[[1]], '---------------------------------------------------------------------------')
+
+    cat('--- Transform type', cfg[[1]], '--------------------------------------------------------------------------\n')
     dTransformedInt <- transformClassifierData(dTest, cfg[[1]], interactionVars = 'gender')
     dTransformedExt <- transformClassifierData(dExt, cfg[[1]], interactionVars = 'gender')
     muExt <- colMeans(dTransformedExt)
-    
+
     internalData <- list(
       z = dTransformedInt,
       p = phatInt,
       y = dTest[['Y']]
     )
-    
+
     externalEstimatorSettings <- createExternalEstimatorSettings(
       reweightAlgorithm = cfg[[2]],
-      nRepetitions = 1,
-      outputDir = getwd(),
-      maxCores = 1
+      nRepetitions = nRepetitions,
+      outputDir = outputDir,
+      maxCores = maxCores
     )
 
     estimatedResults[[paramIdx]] <- estimateExternalPerformanceFromStatistics(
@@ -163,22 +163,22 @@ arrangeAgeGenderEmulationResults <- function(allResults, reweightConfigs) {
     keys, 'type', 'value.ext', 'outcomeCount', 'value.eval', 'opt.err', 'Max.Weighted.SMD', 'Estimation.Time')
   rSummary <- matrix(nrow=0, ncol=length(summaryColNames))
   colnames(rSummary) <- summaryColNames
-  
-  
+
+
   for (b in 1:length(allResults)) {
     experimentName <- names(allResults)[b]
     resultsName <- str_split(substring(experimentName, 1, nchar(experimentName)), '-')  # TODO learn
     internalDb <- resultsName[[1]][1]
     externalDb <- resultsName[[1]][3]
-    
-    
+
+
     if (!is.null(allResults[[b]]$realResults$`Int AUROC`)) {
       intAUC <- allResults[[b]]$realResults$`Int AUROC`
       if (!is.null(allResults[[b]]$realResults$`Ext AUROC`)) {
         extAUC <- allResults[[b]]$realResults$`Ext AUROC`
         l <- c(analysisIdx, internalDb, externalDb, 'internal', extAUC, NA, intAUC, NA, NA, NA)
         rSummary <- rbind(rSummary, l)
-        
+
         for (paramIdx in 1:length(reweightConfigs)) {
           cfg <- reweightConfigs[[paramIdx]]
           wr <- allResults[[b]]$estimatedResults[[paramIdx]]$weightingResults
@@ -203,7 +203,7 @@ arrangeAgeGenderEmulationResults <- function(allResults, reweightConfigs) {
   rSummary[['opt.err']] <- log10(as.numeric(rSummary[['opt.err']]))
   rSummary[['Max.Weighted.SMD']] <- as.numeric(rSummary[['Max.Weighted.SMD']])
   rSummary[['Estimation.Time']] <- as.numeric(rSummary[['Estimation.Time']])
-  
+
   levels = c('internal')
   for (paramIdx in 1:length(reweightConfigs)) {
     cfg <- reweightConfigs[[paramIdx]]
@@ -211,7 +211,7 @@ arrangeAgeGenderEmulationResults <- function(allResults, reweightConfigs) {
   }
   print(levels)
   rSummary$type <- factor(rSummary$type, levels = levels,ordered = TRUE)
-  return(rSummary)  
+  return(rSummary)
 }
 
 getSkewSpecificTag <- function(prefix, trainer, analysisIdx, nMaxTrainSample, nr, skewName) {
@@ -232,7 +232,7 @@ plotTable1Results <- function(workDir, prefix, skewNames, nMaxTrainSample, nr, a
     allResults <- readRDS(rdsFileName)
     cat('Read', rdsFileName, '\n')
     rSummary <- arrangeAgeGenderEmulationResults(allResults, reweightConfigs)
-    rSummary[['skew']] <- skewName 
+    rSummary[['skew']] <- skewName
     aSummary <- rbind(aSummary, rSummary)
   }
   aSummary[['has.eval']] = as.numeric(!is.na(aSummary[['value.eval']]))
@@ -243,28 +243,28 @@ plotTable1Results <- function(workDir, prefix, skewNames, nMaxTrainSample, nr, a
     ylab('AUROC difference') +
     facet_wrap(~skew, nrow = 1)
   ggsave(file.path(workDir, 'output', glue('{tag2}.png')), height = 4, width = 4*length(skewNames))
-  
+
   p <- aSummary %>%
     ggplot(aes(x=type, y=opt.err, color = type)) + # group=type,
     geom_boxplot() +
     ylab('log10(optimization error)') +
     facet_wrap(~skew, nrow = 1)
   ggsave(file.path(workDir, 'output', glue('{tag2}-opt.err.png')), height = 4, width = 4*length(skewNames))
-  
+
   p <- aSummary %>%
     ggplot(aes(x=type, y=Max.Weighted.SMD, color = type)) + # group=type,
     geom_boxplot() +
     ylab('Max weighted SMD') +
     facet_wrap(~skew, nrow = 1)
   ggsave(file.path(workDir, 'output', glue('{tag2}-Max.Weighted.SMD.png')), height = 4, width = 4*length(skewNames))
-  
+
   p <- aSummary %>%
     ggplot(aes(x=type, y=Estimation.Time, color = type)) + # group=type,
     geom_boxplot() +
     ylab('Estimation Time') +
     facet_wrap(~skew, nrow = 1)
   ggsave(file.path(workDir, 'output', glue('{tag2}-Estimation.Time.png')), height = 4, width = 4*length(skewNames))
-  
+
   p <- aSummary %>%
     ggplot(aes(x=type, y=has.eval, color = type)) + # group=type,
     geom_boxplot() +

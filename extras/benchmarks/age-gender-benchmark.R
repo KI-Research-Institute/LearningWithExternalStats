@@ -10,8 +10,7 @@
 #'
 #' TODO
 #' 1. Make a streamlined pipeline
-#' 2. Should we split features when adding interaction of just x timems g
-#' Add number of times there is an estimation
+#' 2. Add number of times there is an estimation
 #'
 rm(list = ls())
 
@@ -38,7 +37,9 @@ source('./age-gender-utils.R')
 allDbNames <- c('ccae', 'mdcd', 'mdcr', 'optum.claims', 'optum.ehr')
 
 nMaxTrainSample <- 5000  # 50000
-nr <- 2  # number of repetitions per configuration (5)
+nSimulationRepetitions <- 5  # number of repetitions per configuration (5)
+nEstimationRepetitions <- 10  # number of repetitions in estimation
+maxCores <- 10
 
 outputDir <- file.path(workDir, 'output')
 reweightEg500 <- seTunedWeightOptimizer(outcomeCol = 'Y', outputDir=outputDir, nIter = 500)
@@ -54,6 +55,7 @@ reweightConfigs <- list(
   # list('New flat',  reweightAdamId, 'Adam Id N'),
   # list('New flat',  reweightSGDId, 'SGD Id N'),
   # list('New flat',  reweightKerasLog, 'KerasLog N'),
+  list('Interaction v0',  reweightEg2000, 'EG Iv0'),
   list('Interaction',  reweightEg2000, 'EG I')
   # list('Interaction',  reweightAdamId, 'Adam Id I'),
   # list('Interaction',  reweightSGDId, 'SGD Id I')
@@ -62,15 +64,15 @@ reweightConfigs <- list(
 
 runTests <- T
 
-# skewNames <- c('', 'skew 4', 'skew 3', 'skew 1')
-skewNames <- c('', 'cskew 4')
+skewNames <- c('', 'skew 4', 'skew 3', 'skew 1')
+# skewNames <- c('', 'cskew 4')
 
-# analysisIdxs <- c(1, 3, 5, 7, 9)  #
-analysisIdxs <- c(1, 3)
+analysisIdxs <- c(1, 3, 5, 7, 9)  #
+# analysisIdxs <- c(1, 3)
 
 
 for (trainer in list(wglmnet())) {
-  for (prefix in c('')) {  # , 'clinical64-'
+  for (prefix in c('', 'clinical64 ')) {  # , 'clinical64-'
     # Main loop
     for (analysisIdx in analysisIdxs) {
       if (runTests) {
@@ -82,12 +84,12 @@ for (trainer in list(wglmnet())) {
         }
         table1s <- read.csv(
           file.path(workDir, 'output', 'short table 1', glue('{prefix} Table 1 - {analysisIdx}.csv')), row.names = 'X')
-        tag <- getSkewSpecificTag(prefix, trainer, analysisIdx, nMaxTrainSample, nr, skewName)
+        tag <- getSkewSpecificTag(prefix, trainer, analysisIdx, nMaxTrainSample, nSimulationRepetitions, skewName)
         cat(tag, '\n')
         rdsFileName <- file.path(workDir, 'output', glue('{tag}-results.RDS'))
-        allResults <- vector(mode = 'list', length = nr)
+        allResults <- vector(mode = 'list', length = nSimulationRepetitions)
         nDbs <- length(allDbNames)
-        for (b in 1:nr)
+        for (b in 1:nSimulationRepetitions)
           for (intDbIdx in 1:nDbs) {
             intDbName <- allDbNames[intDbIdx]
             for (extDbIdx in 1:nDbs) { # nDbs
@@ -98,7 +100,7 @@ for (trainer in list(wglmnet())) {
                 cat('\n', exprimentName, '\n')
                 allResults[[exprimentName]] <- testSingleAgeGenderOutcome(
                   table1s, intDbName, extDbName, reweightConfigs, nMaxTrainSample = nMaxTrainSample, skew = skew,
-                  trainer = trainer)
+                  trainer = trainer, nRepetitions=nEstimationRepetitions, maxCores=maxCores, outputDir=outputDir)
               }
             }
           }
@@ -110,7 +112,7 @@ for (trainer in list(wglmnet())) {
         ggsave(file.path(workDir, 'output', glue('{tag} ext-eval.png')))
         }
       }
-      plotTable1Results(workDir, prefix, skewNames, nMaxTrainSample, nr, analysisIdx)
+      plotTable1Results(workDir, prefix, skewNames, nMaxTrainSample, nSimulationRepetitions, analysisIdx)
     }
   }
 }

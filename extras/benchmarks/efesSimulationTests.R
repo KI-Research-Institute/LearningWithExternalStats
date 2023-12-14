@@ -14,122 +14,6 @@ source('../mlWrappers/wrappedml.R')
 source('../simulations/anchorModelSimulator.R')
 
 
-getDefaultEfesTestParams <- function(outputDir) {
-
-  minEpsilon0 <- 1e-4
-  maxEpsilon0 <- 1e-0
-  nEpsilon0 <- 4
-
-  minAlpha <- 0.1
-  maxAlpha <- 10
-  nAlphas <- 4
-
-  alphas <- minAlpha*exp(log(maxAlpha/minAlpha)*(0:nAlphas)/nAlphas)
-  epsilon0s = minEpsilon0*exp(log(maxEpsilon0/minEpsilon0)*(0:nEpsilon0)/nEpsilon0)
-  epsilon0sDeterministic = minEpsilon0*exp(log(1e-1/minEpsilon0)*(0:nEpsilon0)/nEpsilon0)
-
-  # estDual <- sgdTunedWeightOptimizer(
-  #   outputDir=outputDir, epsilon0s=epsilon0sDeterministic, batchSize = NA, polyBeta = 0, improveTh=1e-4, nProbe = 10)
-  # estDualPrimal <- sgdTunedWeightOptimizer(
-  #   outputDir=outputDir, epsilon0s=epsilon0sDeterministic, batchSize = NA, polyBeta = 0, improveTh=1e-4, nProbe = 10,
-  #   primal = T)
-
-  maxProp = 100  # TODO refine this test
-  cvxAlg  <- createExternalEstimatorSettings(
-    reweightAlgorithm = cvxWeightOptimizer(),
-    shortName = 'CVX 5k',
-    stratifiedSampling = T,
-    nMaxReweight = 5000, # maximum samples in a single round of repeated estimations
-    nRepetitions = 10,
-    maxProp = maxProp,
-    outputDir = outputDir,
-    maxCores = 15
-  )
-
-
-  nrep <- 15
-  nMaxReweight <- 500 # 5000
-  # 1.
-  est1 <- cvxAlg
-  est1$nRepetitions = nrep
-  est1$shortName <- 'W-MSE few iters'
-  est1$nMaxReweight <- nMaxReweight
-  est1$reweightAlgorithm <-
-    seTunedWeightOptimizer(
-      outcomeCol = 'Y', alphas = alphas, outputDir=outputDir, improveTh = 1e-4, maxErr = 1, nIter = 200, nTuneIter=20)
-
-  # 2.
-  est2 <- cvxAlg
-  est2$nRepetitions = nrep
-  est2$shortName <- 'W-MSE few warm start'
-  est2$nMaxReweight <- nMaxReweight
-  est2$warmStartAlgorithm <-
-    seTunedWeightOptimizer(
-      outcomeCol = 'Y', alphas = alphas, outputDir=outputDir, improveTh = 1e-4, maxErr = 1, nIter = 40, nTuneIter=4)
-  est2$reweightAlgorithm <-
-    seTunedWeightOptimizer(
-      outcomeCol = 'Y', alphas = alphas, outputDir=outputDir, improveTh = 1e-4, maxErr = 1, nIter = 200, nTuneIter=20)
-  # 3.
-  est3 <- cvxAlg
-  est3$nRepetitions = nrep
-  est3$shortName <- 'W-MSE many iters'
-  est3$nMaxReweight <- nMaxReweight
-  est3$reweightAlgorithm <-
-    seTunedWeightOptimizer(
-      outcomeCol = 'Y', alphas = alphas, outputDir=outputDir, improveTh = 1e-4, maxErr = 1, nIter = 500, nTuneIter=50)
-
-  # 4.
-  est4 <- cvxAlg
-  est4$nRepetitions = nrep
-  est4$shortName <- 'W-MSE many warm start'
-  est4$nMaxReweight <- nMaxReweight
-  est4$warmStartAlgorithm <-
-    seTunedWeightOptimizer(
-      outcomeCol = 'Y', alphas = alphas, outputDir=outputDir, improveTh = 1e-4, maxErr = 1, nIter = 40, nTuneIter=4)
-    # sgdTunedWeightOptimizer(outputDir=outputDir, epsilon0s=epsilon0s, batchSize = 1000, polyBeta = 1)
-  est4$reweightAlgorithm <-
-    seTunedWeightOptimizer(
-      outcomeCol = 'Y', outcomeCol = 'Y', alphas = alphas, outputDir=outputDir, improveTh = 1e-4, maxErr = 1,
-      nIter = 500, nTuneIter=50)
-
-
-  minW <- 0  # minimum weight
-  maxProp = 100  # TODO refine this test
-  testParams <- list(
-    n = 3e5,  # number of samples in train and tests sets
-    p = 500,  # number of features
-    binary = T, # type of covariates
-    ntop = 1000,  # number of features used in estimation of external performance
-    nTest = 20,  # number of tests
-    # Simulation model
-    outcomeOffset = -log(250),  # offset of the outcome logistic model, determines outcome prevalence
-    sigma_B_X_AH = 0,  # degree of porximity assumption violation
-    sigma_B_Y_X_factor = 4,
-    sigma_B_Y_XA_factor = 4,
-    loadCached = F,  # load or train from scratch
-    envOffset = 5,
-    # Estimation model
-    trainer = wglmnet(),  # wXGBoost()
-    outputDir = outputDir,
-    # Reweighing parameters
-    estimationParams = list(
-      #cvxAlg,
-      est1,
-      est2,
-      est3,
-      est4
-    )
-  )
-  # Notes: SCS failed with n=1000 p=100 in 1/2 experiments. n=5000, p=10 5/7
-  # ECOS_BB quite similar to ECOS (BB is branch and bound and suitable for mixed integer problems)
-  return(testParams)
-}
-
-
-
-
-
-
 testSimulatedData <- function(testParams, testNum) {
   # Generate a single test set for different configuration
   # TODO change the parameters structure
@@ -282,7 +166,10 @@ estimatePerformance <- function(testParams, i, d, pInternal, vars1) {
   }
 
   estimatorSettings  <- createExternalEstimatorSettings(
-    reweightAlgorithm = estimationParams[[2]], nRepetitions = 15, outputDir = outputDir, maxCores = 1)
+    reweightAlgorithm = estimationParams[[2]],
+    nRepetitions = testParams$nRepetitions,
+    outputDir = outputDir,
+    maxCores = testParams$maxCores)
 
   res <- estimateExternalPerformanceFromStatistics(
     internalData = internalData,
